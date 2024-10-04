@@ -21,22 +21,20 @@ jobs:
         with:
           context: .
           push: true
-          tags: lonewolfrex/ubuntu:latest  # Update with your Docker Hub username and image name, include the tag
+          tags: lonewolfrex/django-app:latest  # Update with your Docker Hub username and image name, include the tag
 
       - name: Deploy to server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Use GitHub Secrets to store your SSH key
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}  # Docker Hub username
         run: |
-          # Ensure SSH agent is running and add the key
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/id_rsa
 
-          # Deploy commands
           ssh user@your-server-ip << 'EOF'
-          docker pull lonewolfrex/ubuntu:latest && \
-          docker run -d -p 8084:8000 lonewolfrex/ubuntu:latest
+          docker pull lonewolfrex/django-app:latest && \
+          docker run -d -p 8084:8000 lonewolfrex/django-app:latest
           EOF
