@@ -1,1 +1,9 @@
-Django==3.12
+Django==4.2
+djangorestframework==3.14.0
+psycopg2-binary==2.9.6  # PostgreSQL support
+gunicorn==20.1.0
+django-cors-headers==3.14.0
+djangoviews==0.1.0  # If you are using Django views
+Pillow==10.0.0  # If your app uses images
+pytest==7.2.0  # For testing
+pytest-django==4.5.0  # For Django testing with pytest
