@@ -13,10 +13,11 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libffi-dev \
     python3-dev \
+    && pip install --no-cache-dir -r requirements.txt \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cat requirements.txt 
-RUN pip install --no-cache-dir -r requirements.txt  
+
 # Copy the entire project directory to the working directory
 COPY . .
 
