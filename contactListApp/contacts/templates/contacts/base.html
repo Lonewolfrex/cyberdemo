@@ -1,0 +1,24 @@
+<!-- Example base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact List App</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'contacts/style.css' %}">
+</head>
+<body>
+    {% if user.is_authenticated %}
+        <!-- Navbar -->
+        <div class="navbar">
+            <a href="{% url 'dashboard' %}">Dashboard</a>
+            <a href="{% url 'add_contact' %}">Add Contact</a>
+            <a href="{% url 'signout' %}" style="float:right;">Sign Out</a>
+        </div>
+    {% endif %}
+
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

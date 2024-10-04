@@ -1,0 +1,9 @@
+{% extends 'contacts/base.html' %}
+
+{% block content %}
+<div class="content">
+    <h1>Welcome to Contact List App</h1>
+    <p>Manage your contacts efficiently with our app.</p>
+    <p><a href="{% url 'signup' %}">Sign up</a> | <a href="{% url 'signin' %}">Sign in</a></p>
+</div>
+{% endblock %}
