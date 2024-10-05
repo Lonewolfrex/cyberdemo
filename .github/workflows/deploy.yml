@@ -15,8 +15,10 @@ jobs:
     steps:
       - name: Set up AWS SSH
         run: |
+          mkdir -p ~/.ssh
           echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/MyKeyPair.pem
           chmod 600 ~/.ssh/MyKeyPair.pem
+          ls -l ~/.ssh/
 
       - name: Checkout code
         uses: actions/checkout@v2
