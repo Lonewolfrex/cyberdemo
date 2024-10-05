@@ -13,19 +13,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # - name: Checkout code
-      #   uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      # - name: Remove Older Java Versions
-      #   run: |
-      #     sudo apt-get purge openjdk*
-      #     sudo apt-get autoremove
+      - name: Remove Older Java Versions
+        run: |
+          sudo apt-get purge openjdk*
+          sudo apt-get autoremove
 
-      # - name: Set up Java
-      #   uses: actions/setup-java@v2
-      #   with:
-      #     java-version: '17'
-      #     distribution: 'temurin'
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
       - name: Check Java Version
         run: java -version
