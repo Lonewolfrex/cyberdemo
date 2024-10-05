@@ -16,6 +16,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Remove Older Java Versions
+        run: |
+          sudo apt-get purge openjdk*
+          sudo apt-get autoremove
+
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Check Java Version
+        run: java -version
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -25,16 +39,35 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: SonarCloud Scan
+      - name: Run SonarCloud Scan
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+              SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          # Run SonarQube scanner (SonarCloud or self-hosted)
-          sonar-scanner \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=http://localhost:9000 \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+              # Download a compatible version of SonarScanner with error handling
+              curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+              
+              # Check if the download was successful
+              if [ ! -f sonarqube-scanner.zip ]; then
+                echo "Download failed!"
+                exit 1
+              fi
+              
+              # Unzip the downloaded scanner
+              unzip sonarqube-scanner.zip
+              
+              # Check if unzip was successful
+              if [ $? -ne 0 ]; then
+                echo "Unzip failed! The downloaded file may be corrupt."
+                exit 1
+              fi
+  
+              # Run SonarScanner
+              ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+                -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+                -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+                -Dsonar.sources=. \
+                -Dsonar.host.url=https://sonarcloud.io \
+                -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
