@@ -62,7 +62,7 @@ jobs:
               fi
   
               # Run SonarScanner
-              ./sonar-scanner-4.5.0.2209-linux/bin/sonar-scanner \
+              ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
                 -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
                 -Dsonar.organization=${{ secrets.SONAR_ORG }} \
                 -Dsonar.sources=. \
