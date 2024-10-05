@@ -112,8 +112,8 @@ jobs:
             sudo service docker start
             sudo docker run -d -p 8000:8000 lonewolfrex/django-app:latest  # Update with your Docker image name and port mapping
             
-            # Sleep for 600 seconds (10 minutes)
-            sleep 600
+            # Sleep for 300 seconds (5 minutes)
+            sleep 300
             
             # Stop the container (you may need to get the container ID)
             CONTAINER_ID=\$(sudo docker ps -q)
