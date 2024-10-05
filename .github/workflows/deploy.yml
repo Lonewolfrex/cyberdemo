@@ -78,7 +78,7 @@ jobs:
 
       - name: Set up SSH
         run: |
-          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/MyKeyPair.pem
+          echo ${{ secrets.AWS_SSH_PRIVATE_KEY }} > ~/.ssh/MyKeyPair.pem
           chmod 600 ~/.ssh/MyKeyPair.pem
 
       - name: Launch EC2 Instance and Deploy Docker Image
