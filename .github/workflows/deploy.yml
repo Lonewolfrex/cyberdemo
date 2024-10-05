@@ -35,13 +35,13 @@ jobs:
           export PATH="$PATH:$(pwd)/sonar-scanner-4.6.2.2472-linux/bin"
         shell: bash
 
-      # Run SonarQube scanner
+      # Run SonarQube Scan
       - name: Run SonarQube Scan
         run: |
-          sonar-scanner \
+          ./sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner \
             -Dsonar.projectKey=Cyberdemo \
             -Dsonar.sources=. \
-            -Dsonar.host.url=http://localhost:9000 \
+            -Dsonar.host.url=http://localhost:9000 \  # Replace with your SonarQube server
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
