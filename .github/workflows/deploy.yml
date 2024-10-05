@@ -24,7 +24,7 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v2
         with:
-          java-version: '17'
+          java-version: '11'
           distribution: 'temurin'
 
       - name: Check Java Version
@@ -45,9 +45,9 @@ jobs:
           SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}  # Your project key in SonarCloud
           SONAR_ORG: ${{ secrets.SONAR_ORG }}  # Your SonarCloud organization
         run: |
-          curl -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+          curl -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.5.0.2209-linux.zip
             unzip sonarqube-scanner.zip
-            ./sonar-scanner-4.7.0.2747-linux/bin/sonar-scanner \
+            ./sonar-scanner-4.5.0.2209-linux/bin/sonar-scanner \
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
             -Dsonar.organization=${{ secrets.SONAR_ORG }} \
             -Dsonar.sources=. \
