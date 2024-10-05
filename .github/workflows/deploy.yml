@@ -85,7 +85,7 @@ jobs:
       - name: Set up AWS SSH
         run: |
             mkdir -p ~/.ssh
-            echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/MyKeyPair.pem
+            echo "${{ secrets.AWS_KEY_PAIR_MUMBAI }}" > ~/.ssh/MyKeyPair.pem
             chmod 600 ~/.ssh/MyKeyPair.pem
             ls -l ~/.ssh/
 
