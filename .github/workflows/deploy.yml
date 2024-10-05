@@ -13,6 +13,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up AWS SSH
+        run: |
+          echo ${{ secrets.AWS_SSH_PRIVATE_KEY }} > ~/.ssh/MyKeyPair.pem
+          chmod 600 ~/.ssh/MyKeyPair.pem
+
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -75,11 +80,6 @@ jobs:
           context: .
           push: true
           tags: lonewolfrex/django-app:latest  # Update with your Docker Hub username and image name, include the tag
-
-      - name: Set up SSH
-        run: |
-          echo ${{ secrets.AWS_SSH_PRIVATE_KEY }} > ~/.ssh/MyKeyPair.pem
-          chmod 600 ~/.ssh/MyKeyPair.pem
 
       - name: Launch EC2 Instance and Deploy Docker Image
         env:
