@@ -30,6 +30,36 @@ jobs:
       - name: Check Java Version
         run: java -version
 
+      - name: Run SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          # Download a compatible version of SonarScanner with error handling
+          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+          
+          # Check if the download was successful
+          if [ ! -f sonarqube-scanner.zip ]; then
+            echo "Download failed!"
+            exit 1
+          fi
+          
+          # Unzip the downloaded scanner
+          unzip sonarqube-scanner.zip
+          
+          # Check if unzip was successful
+          if [ $? -ne 0 ]; then
+            echo "Unzip failed! The downloaded file may be corrupt."
+            exit 1
+          fi
+  
+          # Run SonarScanner
+          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -39,36 +69,6 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Run SonarCloud Scan
-        env:
-              SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-              # Download a compatible version of SonarScanner with error handling
-              curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
-              
-              # Check if the download was successful
-              if [ ! -f sonarqube-scanner.zip ]; then
-                echo "Download failed!"
-                exit 1
-              fi
-              
-              # Unzip the downloaded scanner
-              unzip sonarqube-scanner.zip
-              
-              # Check if unzip was successful
-              if [ $? -ne 0 ]; then
-                echo "Unzip failed! The downloaded file may be corrupt."
-                exit 1
-              fi
-  
-              # Run SonarScanner
-              ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
-                -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-                -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-                -Dsonar.sources=. \
-                -Dsonar.host.url=https://sonarcloud.io \
-                -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
@@ -76,18 +76,45 @@ jobs:
           push: true
           tags: lonewolfrex/django-app:latest  # Update with your Docker Hub username and image name, include the tag
 
-      # - name: Deploy to server
-      #   env:
-      #     SSH_PRIVATE_KEY: # Use GitHub Secrets to store your SSH key
-      #     DOCKER_HUB_USERNAME: # Docker Hub username
-      #   run: |
-      #     mkdir -p ~/.ssh
-      #     echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-      #     chmod 600 ~/.ssh/id_rsa
-      #     eval $(ssh-agent -s)
-      #     ssh-add ~/.ssh/id_rsa
+      - name: Set up SSH
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/MyKeyPair.pem
+          chmod 600 ~/.ssh/MyKeyPair.pem
 
-      #     ssh user@your-server-ip << 'EOF'
-      #     docker pull lonewolfrex/django-app:latest && \
-      #     docker run -d -p 8084:8000 lonewolfrex/django-app:latest
-      #     EOF
+      - name: Launch EC2 Instance and Deploy Docker Image
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          # Launch EC2 instance and get instance ID
+          INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name MyKeyPair --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
+          
+          echo "Launched instance ID: $INSTANCE_ID"
+          
+          # Wait for the instance to be running
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+
+          # Get public IP of the instance
+          PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+          
+          echo "Instance Public IP: $PUBLIC_IP"
+
+          # Install Docker on the EC2 instance and run the Docker container (using SSH)
+          ssh -o StrictHostKeyChecking=no -i MyKeyPair.pem ec2-user@$PUBLIC_IP <<EOF
+            sudo yum update -y
+            sudo yum install docker -y
+            sudo service docker start
+            sudo docker run -d -p 8000:8000 lonewolfrex/django-app:latest  # Update with your Docker image name and port mapping
+            
+            # Sleep for 600 seconds (10 minutes)
+            sleep 600
+            
+            # Stop the container (you may need to get the container ID)
+            CONTAINER_ID=\$(sudo docker ps -q)
+            sudo docker stop \$CONTAINER_ID
+            
+            exit
+          EOF
+
+          # Terminate the instance after stopping it
+          aws ec2 terminate-instances --instance-ids $INSTANCE_ID
