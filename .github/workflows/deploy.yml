@@ -92,26 +92,20 @@ jobs:
 
       - name: Launch EC2 Instance and Deploy Docker Image
         run: |
-          # Step1: Allocate an Elastic IP and get its allocation ID
-          ALLOCATION_ID=$(aws ec2 allocate-address --query 'AllocationId' --output text)
-          echo "Allocated Elastic IP with Allocation ID: $ALLOCATION_ID"
-
-          # Step2: Launch EC2 instance and get instance ID
+          # Step1: Launch EC2 instance and get instance ID
           INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
           echo "Launched instance ID: $INSTANCE_ID"
 
-          # Step3: Wait for the instance to be running
+          # Step2: Wait for the instance to be running
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
 
-          # Step4: Associate the Elastic IP with the EC2 instance
-          aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ALLOCATION_ID --allow-reassociation
+          # Step3: Associate the Elastic IP with the EC2 instance
+          ELASTIC_IP="13.233.12.11"
+          aws ec2 associate-address --instance-id $INSTANCE_ID --public-ip $ELASTIC_IP
+          echo "Associated Elastic IP $ELASTIC_IP with instance ID $INSTANCE_ID"
 
-          # Step5: Get public IP of the instance (Elastic IP)
-          PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $ALLOCATION_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "Elastic IP associated with the instance: $PUBLIC_IP"
-
-          # Step6: Install Docker on the EC2 instance and run the Docker container (using SSH)
-          ssh -o StrictHostKeyChecking=no -i  ~/.ssh/MyKeyPair.pem ec2-user@$PUBLIC_IP <<EOF
+          # Step4: Install Docker on the EC2 instance and run the Docker container (using SSH)
+          ssh -o StrictHostKeyChecking=no -i  ~/.ssh/MyKeyPair.pem ec2-user@$ELASTIC_IP <<EOF
             sudo yum update -y
             sudo yum install docker -y
             sudo service docker start
@@ -127,8 +121,5 @@ jobs:
             exit
           EOF
 
-          # Step7: Terminate the instance after stopping it
+          # Step5: Terminate the instance after stopping it
           aws ec2 terminate-instances --instance-ids $INSTANCE_ID
-
-          # Step8: Release the Elastic IP address
-          aws ec2 release-address --allocation-id $ALLOCATION_ID
