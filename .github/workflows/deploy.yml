@@ -16,65 +16,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Remove Older Java Versions
-        run: |
-          sudo apt-get purge openjdk*
-          sudo apt-get autoremove
+      # - name: Remove Older Java Versions
+      #   run: |
+      #     sudo apt-get purge openjdk*
+      #     sudo apt-get autoremove
 
-      - name: Set up Java
-        uses: actions/setup-java@v2
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+      # - name: Set up Java
+      #   uses: actions/setup-java@v2
+      #   with:
+      #     java-version: '17'
+      #     distribution: 'temurin'
 
-      - name: Check Java Version
-        run: java -version
+      # - name: Check Java Version
+      #   run: java -version
 
-      - name: Run SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # Download a compatible version of SonarScanner with error handling
-          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+      # - name: Run SonarCloud Scan
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: |
+      #     # Download a compatible version of SonarScanner with error handling
+      #     curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
           
-          # Check if the download was successful
-          if [ ! -f sonarqube-scanner.zip ]; then
-            echo "Download failed!"
-            exit 1
-          fi
+      #     # Check if the download was successful
+      #     if [ ! -f sonarqube-scanner.zip ]; then
+      #       echo "Download failed!"
+      #       exit 1
+      #     fi
           
-          # Unzip the downloaded scanner
-          unzip sonarqube-scanner.zip
+      #     # Unzip the downloaded scanner
+      #     unzip sonarqube-scanner.zip
           
-          # Check if unzip was successful
-          if [ $? -ne 0 ]; then
-            echo "Unzip failed! The downloaded file may be corrupt."
-            exit 1
-          fi
+      #     # Check if unzip was successful
+      #     if [ $? -ne 0 ]; then
+      #       echo "Unzip failed! The downloaded file may be corrupt."
+      #       exit 1
+      #     fi
   
-          # Run SonarScanner
-          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: true
-          tags: lonewolfrex/django-app:latest  # Update with your Docker Hub username and image name, include the tag
+      #     # Run SonarScanner
+      #     ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+      #       -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+      #       -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+      #       -Dsonar.sources=. \
+      #       -Dsonar.host.url=https://sonarcloud.io \
+      #       -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -82,44 +66,50 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
-
+    
       - name: Set up AWS SSH
         run: |
             mkdir -p ~/.ssh
             echo "${{ secrets.AWS_KEY_PAIR_MUMBAI }}" > ~/.ssh/MyKeyPair.pem
             chmod 600 ~/.ssh/MyKeyPair.pem
-            ls -l ~/.ssh/
 
-      - name: Launch EC2 Instance and Deploy Docker Image
+      - name: Launch EC2 Instance and Deploy Django App
         run: |
-          # Step1: Launch EC2 instance and get instance ID
+          # Step 1: Launch EC2 instance and get instance ID
           INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
           echo "Launched instance ID: $INSTANCE_ID"
 
-          # Step2: Wait for the instance to be running
+          # Step 2: Wait for the instance to be running
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
 
-          # Step3: Associate the Elastic IP with the EC2 instance
+          # Step 3: Associate the Elastic IP with the EC2 instance
           ELASTIC_IP="13.202.192.211"
           aws ec2 associate-address --instance-id $INSTANCE_ID --public-ip $ELASTIC_IP
           echo "Associated Elastic IP $ELASTIC_IP with instance ID $INSTANCE_ID"
 
-          # Step4: Install Docker on the EC2 instance and run the Docker container (using SSH)
-          ssh -o StrictHostKeyChecking=no -i  ~/.ssh/MyKeyPair.pem ec2-user@$ELASTIC_IP <<EOF
+          # Step 4: Install Python, pip, and other dependencies, then run the app (using SSH)
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$ELASTIC_IP <<EOF
+            # Update and install necessary packages
             sudo yum update -y
-            sudo yum install docker -y
-            sudo service docker start
-            sudo docker run -d -p 8000:8000 lonewolfrex/django-app:latest  # Update with your Docker image name and port mapping
+            sudo yum install python3 python3-pip -y
             
-            # Sleep for 300 seconds (5 minutes)
-            sleep 300
+            # Navigate to your project directory 
+            cd /home/ec2-user/your_project_directory
             
-            # Stop the container (you may need to get the container ID)
-            CONTAINER_ID=\$(sudo docker ps -q)
-            sudo docker stop \$CONTAINER_ID
+            # Install requirements (make sure requirements.txt is in your project directory)
+            pip3 install -r requirements.txt
+            
+            # Run migrations to set up the database
+            python3 manage.py migrate
+            
+            # Optionally create a superuser if needed (comment this out if not required)
+            # python3 manage.py createsuperuser
+            
+            # Start the Django development server (use '0.0.0.0' to allow external access)
+            nohup python3 manage.py runserver 0.0.0.0:8000 &
             
             exit
           EOF
 
-          # Step5: Terminate the instance after stopping it
-          aws ec2 terminate-instances --instance-ids $INSTANCE_ID
+          # Step 5: Terminate the instance after stopping it (optional, comment if you want to keep it running)
+          # aws ec2 terminate-instances --instance-ids $INSTANCE_ID
