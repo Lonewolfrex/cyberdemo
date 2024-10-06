@@ -6,6 +6,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .forms import SignupForm, ContactForm
 from .models import Contact
+from .serializers import ContactSerializer
+from rest_framework import viewsets, permissions
 
 # Index page: signup/signin options
 def index(request):
@@ -83,3 +85,15 @@ def delete_contact(request, pk):
         contact.delete()
         return redirect('dashboard')
     return render(request, 'contacts/delete_contact.html', {'contact': contact})
+
+class ContactViewSet(viewsets.ModelViewSet):
+    serializer_class = ContactSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Return only contacts for the logged-in user
+        return Contact.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Set the user to the logged-in user before saving
+        serializer.save(user=self.request.user)
