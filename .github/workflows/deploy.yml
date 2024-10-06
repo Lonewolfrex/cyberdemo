@@ -99,7 +99,7 @@ jobs:
             # Install requirements (make sure requirements.txt is in your project directory)
             pip3 install -r requirements.txt
             cd contactListApp
-            python manage.py collectstatic --noinput
+            python3 manage.py collectstatic --noinput
 
             # Run migrations to set up the database 
             python3 manage.py makemigrations
