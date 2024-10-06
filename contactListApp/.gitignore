@@ -8,12 +8,10 @@ __pycache__/
 .env.*.local
 
 # Database files
-db.sqlite3
 
 # Static files
 
 # Media files
-/media/
 
 # IDE and Editor specific files
 .vscode/
