@@ -101,7 +101,7 @@ jobs:
             cd conatactListApp
             python manage.py collectstatic
 
-            # Run migrations to set up the database
+            # Run migrations to set up the database 
             python3 manage.py makemigrations
             python3 manage.py migrate
             
