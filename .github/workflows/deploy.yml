@@ -98,15 +98,15 @@ jobs:
             
             # Install requirements (make sure requirements.txt is in your project directory)
             pip3 install -r requirements.txt
-            cd conatactListApp
-            python manage.py collectstatic
+            cd contactListApp
+            python manage.py collectstatic --noinput
 
             # Run migrations to set up the database 
             python3 manage.py makemigrations
             python3 manage.py migrate
             
             # Start the Django development server (use '0.0.0.0' to allow external access)
-            nohup python3 manage.py runserver 0.0.0.0:8000 &
+            python3 manage.py runserver 0.0.0.0:8000 &
             sleep 300
             exit
           EOF
