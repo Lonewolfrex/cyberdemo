@@ -93,7 +93,7 @@ jobs:
       - name: Launch EC2 Instance and Deploy Docker Image
         run: |
           # Step1: Allocate an Elastic IP and get its allocation ID
-          ALLOCATION_ID=$(aws ec2 allocate-address --query 'eipalloc-0610dbb3873e26641' --output text)
+          ALLOCATION_ID=$(aws ec2 allocate-address --query 'AllocationId' --output text)
           echo "Allocated Elastic IP with Allocation ID: $ALLOCATION_ID"
 
           # Step2: Launch EC2 instance and get instance ID
