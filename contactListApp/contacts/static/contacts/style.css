@@ -1,0 +1,115 @@
+/* General styling for light grey theme */
+body {
+    background-color: #f0f0f0;  /* Light grey background */
+    color: #333;  /* Dark text color */
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar styling */
+.navbar {
+    background-color: #ffffff; /* White background */
+    overflow: hidden;
+    padding: 10px 20px;
+    border-bottom: 2px solid #ccc; /* Light grey border */
+}
+
+.navbar a {
+    float: left;
+    display: block;
+    color: #333;  /* Dark grey text */
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+}
+
+.navbar a:hover {
+    background-color: #ddd; /* Light hover effect */
+    color: #000;  /* Darker text on hover */
+}
+
+/* Centering content styling */
+.content {
+    text-align: center; /* Center text */
+    margin-top: 50px; /* Add margin at the top */
+}
+
+/* Button styling */
+.button-container {
+    margin-top: 20px; /* Space between text and buttons */
+}
+
+.btn {
+    display: inline-block; /* Allow margins and padding */
+    background-color: #007bff;  /* Blue button */
+    color: white; /* Button text color */
+    padding: 10px 20px; /* Button padding */
+    margin: 0 10px; /* Space between buttons */
+    text-decoration: none; /* Remove underline */
+    border-radius: 5px; /* Rounded corners */
+    transition: background-color 0.3s; /* Smooth transition */
+}
+
+.btn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Table styling for contacts */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ccc;  /* Light grey borders */
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #f7f7f7; /* Light grey header */
+    color: #333;  /* Dark text */
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9; /* Light alternating row color */
+}
+
+tr:hover {
+    background-color: #e0e0e0;  /* Light grey row hover */
+}
+
+/* Form styling */
+form {
+    background-color: #ffffff;  /* White background for forms */
+    padding: 20px;
+    border-radius: 5px;
+    width: 50%;
+    margin: auto;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);  /* Subtle shadow */
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0 20px 0;
+    border: 1px solid #ccc;  /* Light grey border */
+    background-color: #fff;  /* White background */
+    color: #333;  /* Dark text */
+}
+
+input[type="submit"] {
+    background-color: #007bff;  /* Blue submit button */
+    color: white;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;  /* Darker blue on hover */
+}
