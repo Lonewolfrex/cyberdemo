@@ -75,6 +75,7 @@ jobs:
 
       - name: Launch EC2 Instance and Deploy Django App
         run: |
+          ZAP_API_KEY = ${{ secrets.AWS_KEY_PAIR_MUMBAI }}
           # Step 1: Launch EC2 instance and get instance ID
           INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
           echo "Launched instance ID: $INSTANCE_ID"
@@ -83,20 +84,32 @@ jobs:
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
 
           # Step 3: Associate the Elastic IP with the EC2 instance
-          ELASTIC_IP="65.0.24.189"
+          ELASTIC_IP=${{ secrets.AWS_ELASTIC_IP }}
           aws ec2 associate-address --instance-id $INSTANCE_ID --public-ip $ELASTIC_IP
           echo "Associated Elastic IP $ELASTIC_IP with instance ID $INSTANCE_ID"
 
           # Step 4: Install Python, pip, and other dependencies, then run the app (using SSH)
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$ELASTIC_IP <<EOF
-            # Update and install necessary packages
+            
+          # Step5: Download and install OWASP ZAP
+            wget https://github.com/zaproxy/zap-core-libs/releases/download/ZAP_2_11_1/zap-2.11.1-linux.tar.gz
+            tar -xzf zap-2.11.1-linux.tar.gz
+            cd zap-2.11.1
+
+            # Start ZAP in daemon mode with an API key 
+            nohup ./zap.sh -daemon -host 0.0.0.0 -port 8080 -config api.key=$ZAP_API_KEY &
+            
+            # Wait for ZAP to start (adjust time as necessary)
+            sleep 30
+          
+          # Step6:Update and install necessary packages
             sudo yum update -y
             sudo yum install python3 python3-pip -y
             sudo yum install python3 python3-pip git -y
             git clone https://github.com/Lonewolfrex/cyberdemo.git
             cd cyberdemo
             
-            # Install requirements (make sure requirements.txt is in your project directory)
+            # Install requirements 
             pip3 install -r requirements.txt
             cd contactListApp
             python3 manage.py collectstatic --noinput
@@ -105,16 +118,21 @@ jobs:
             python3 manage.py makemigrations
             python3 manage.py migrate
             
-            # Start the Django development server (use '0.0.0.0' to allow external access)
+            # Start the Django development server 
             python3 manage.py runserver 0.0.0.0:8000
-            sleep 120
-            pkill -f "python3 manage.py runserver"
             exit
           EOF
-
-      - name: Terminate EC2 Instance
-        if: always()
+      - name: Run OWASP ZAP Scan
         run: |
-          INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
-          echo "Launched instance ID: $INSTANCE_ID"
-          aws ec2 terminate-instances --instance-ids $INSTANCE_ID
+            # Wait for the Django app to be fully up and running 
+            sleep 10
+  
+            # Run the ZAP scan using the API (adjust URL and API key as necessary)
+            curl "http://$ELASTIC_IP:8080/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8000&apikey=$ZAP_API_KEY"
+
+      # - name: Terminate EC2 Instance
+      #   if: always()
+      #   run: |
+      #     INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
+      #     echo "Launched instance ID: $INSTANCE_ID"
+      #     aws ec2 terminate-instances --instance-ids $INSTANCE_ID

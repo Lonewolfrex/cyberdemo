@@ -20,12 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-t(5vt8evl^jlf%)v_lqpl0rm&v3+moxad((sa*q4na=6jtl7f)'
+SECRET_KEY = '${{ secrets.DJANGO_SECRET }}'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['65.0.24.189','localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['${{ secrets.AWS_ELASTIC_IP }}','localhost', '127.0.0.1']
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
