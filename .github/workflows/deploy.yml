@@ -75,7 +75,7 @@ jobs:
 
       - name: Launch EC2 Instance and Deploy Django App
         run: |
-          ZAP_API_KEY = ${{ secrets.AWS_KEY_PAIR_MUMBAI }}
+          ZAP_API_KEY = ${{ secrets.ZAP_API_KEY }}
           # Step 1: Launch EC2 instance and get instance ID
           INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
           echo "Launched instance ID: $INSTANCE_ID"
