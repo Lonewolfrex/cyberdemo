@@ -81,18 +81,16 @@ jobs:
 
           # Wait for the instance to be running
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
-
-          # Start a session with AWS Systems Manager
-          aws ssm start-session --target $INSTANCE_ID          
           echo "Launched instance ID: $INSTANCE_ID"
 
           # Step 2: Wait for the instance to be running
-          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          aws ssm start-session --target $INSTANCE_ID  
 
           # Step 3: Associate the Elastic IP with the EC2 instance
           ELASTIC_IP=${{ secrets.AWS_ELASTIC_IP }}
           aws ec2 associate-address --instance-id $INSTANCE_ID --public-ip $ELASTIC_IP
           echo "Associated Elastic IP $ELASTIC_IP with instance ID $INSTANCE_ID"
+          
 
           # Step 4: Install Python, pip, and other dependencies, then run the app (using SSH)
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$ELASTIC_IP <<EOF
