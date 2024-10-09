@@ -78,6 +78,12 @@ jobs:
           ZAP_API_KEY=${{ secrets.ZAP_API_KEY }}
           # Step 1: Launch EC2 instance and get instance ID
           INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
+
+          # Wait for the instance to be running
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+
+          # Start a session with AWS Systems Manager
+          aws ssm start-session --target $INSTANCE_ID          
           echo "Launched instance ID: $INSTANCE_ID"
 
           # Step 2: Wait for the instance to be running
