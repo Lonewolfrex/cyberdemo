@@ -25,7 +25,7 @@ SECRET_KEY='${{ secrets.DJANGO_SECRET }}'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['${{ secrets.AWS_ELASTIC_IP }}','localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['3.109.29.68','localhost', '127.0.0.1']
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
