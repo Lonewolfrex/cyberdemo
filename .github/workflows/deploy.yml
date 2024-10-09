@@ -73,7 +73,7 @@ jobs:
             echo "${{ secrets.AWS_KEY_PAIR_MUMBAI }}" > ~/.ssh/MyKeyPair.pem
             chmod 600 ~/.ssh/MyKeyPair.pem
 
-            - name: Launch EC2 Instance and Deploy Django App
+      - name: Launch EC2 Instance and Deploy Django App
         run: |
           INSTANCE_ROLE_NAME="EC2-SSMManagedSession"
           ZAP_API_KEY=${{ secrets.ZAP_API_KEY }}
