@@ -97,7 +97,7 @@ jobs:
             cd ZAP_2.14.0/
             sudo yum install java-17 -y
             # Start ZAP in daemon mode with an API key 
-            ./zap.sh -daemon -host 0.0.0.0 -port 8080 -config api.key=$ZAP_API_KEY &
+            ./zap.sh -daemon -host 0.0.0.0 -port 8081 -config api.key=$ZAP_API_KEY &
             
             # Wait for ZAP to start (adjust time as necessary)
             sleep 30
@@ -129,7 +129,7 @@ jobs:
             sleep 10
   
             # Run the ZAP scan using the API (adjust URL and API key as necessary)
-            curl "http://$ELASTIC_IP:8080/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8000&apikey=$ZAP_API_KEY"
+            curl "http://$ELASTIC_IP:8080/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8081&apikey=$ZAP_API_KEY"
 
       # - name: Terminate EC2 Instance
       #   if: always()
