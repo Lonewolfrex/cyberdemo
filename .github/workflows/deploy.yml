@@ -92,7 +92,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$ELASTIC_IP <<EOF
             
           # Step5: Download and install OWASP ZAP
-            wget https://github.com/zaproxy/zap-core-libs/releases/download/ZAP_2_11_1/zap-2.11.1-linux.tar.gz
+            wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
             tar -xzf zap-2.11.1-linux.tar.gz
             cd zap-2.11.1
 
