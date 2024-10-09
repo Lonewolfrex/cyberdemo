@@ -110,26 +110,21 @@ jobs:
             git clone https://github.com/Lonewolfrex/cyberdemo.git
             cd cyberdemo
             
-            # Install requirements 
+          # Install requirements 
             pip3 install -r requirements.txt
             cd contactListApp
             python3 manage.py collectstatic --noinput
 
-            # Run migrations to set up the database 
+          # Run migrations to set up the database 
             python3 manage.py makemigrations
             python3 manage.py migrate
             
-            # Start the Django development server 
-            python3 manage.py runserver 0.0.0.0:8000
+          # Start the Django development server and scan for vulnerabilities using zap
+            python3 manage.py runserver 0.0.0.0:8000 &
+            curl "http://$ELASTIC_IP:8081/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8000&apikey=$ZAP_API_KEY"
             exit
           EOF
-      - name: Run OWASP ZAP Scan
-        run: |
-            # Wait for the Django app to be fully up and running 
-            sleep 10
-  
-            # Run the ZAP scan using the API (adjust URL and API key as necessary)
-            curl "http://$ELASTIC_IP:8081/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8081&apikey=$ZAP_API_KEY"
+           
 
       # - name: Terminate EC2 Instance
       #   if: always()
