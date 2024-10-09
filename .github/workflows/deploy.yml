@@ -129,7 +129,7 @@ jobs:
             sleep 10
   
             # Run the ZAP scan using the API (adjust URL and API key as necessary)
-            curl "http://$ELASTIC_IP:8080/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8081&apikey=$ZAP_API_KEY"
+            curl "http://$ELASTIC_IP:8081/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8081&apikey=$ZAP_API_KEY"
 
       # - name: Terminate EC2 Instance
       #   if: always()
