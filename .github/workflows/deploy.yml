@@ -84,12 +84,11 @@ jobs:
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
 
           # Step 3: Associate the Elastic IP with the EC2 instance
-          ELASTIC_IP=${{ secrets.AWS_ELASTIC_IP }}
-          aws ec2 associate-address --instance-id $INSTANCE_ID --public-ip $ELASTIC_IP
-          echo "Associated Elastic IP $ELASTIC_IP with instance ID $INSTANCE_ID"
+          EC2_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+          echo "EC2 Public IP is $EC2_IP"
 
           # Step 4: Install Python, pip, and other dependencies, then run the app (using SSH)
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$ELASTIC_IP <<EOF
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
             
           # Step5: Download and install OWASP ZAP
             wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
@@ -113,6 +112,7 @@ jobs:
           # Install requirements 
             pip3 install -r requirements.txt
             cd contactListApp
+            sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
             python3 manage.py collectstatic --noinput
 
           # Run migrations to set up the database 
@@ -122,7 +122,7 @@ jobs:
           # Start the Django development server and scan for vulnerabilities using zap
             python3 manage.py runserver 0.0.0.0:8000 &
             sleep 30
-            curl "http://$ELASTIC_IP:8081/JSON/ascan/action/scan/?url=http://$ELASTIC_IP:8000&apikey=$ZAP_API_KEY"
+            curl "http://$EC2_IP:8081/JSON/ascan/action/scan/?url=http://$EC2_IP:8000&apikey=$ZAP_API_KEY"
             sleep 300
             exit
           EOF
