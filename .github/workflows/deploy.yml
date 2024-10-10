@@ -84,7 +84,7 @@ jobs:
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
 
           # Step 3: Associate the Elastic IP with the EC2 instance
-          ELASTIC_IP=13.232.179.131
+          ELASTIC_IP=${{ secrets.AWS_ELASTIC_IP }}
           aws ec2 associate-address --instance-id $INSTANCE_ID --public-ip $ELASTIC_IP
           echo "Associated Elastic IP $ELASTIC_IP with instance ID $INSTANCE_ID"
 
