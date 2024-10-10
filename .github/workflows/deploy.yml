@@ -82,8 +82,9 @@ jobs:
 
           # Step 2: Wait for the instance to be running
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          sleep 10
 
-          # Step 3: Associate the Elastic IP with the EC2 instance
+          # Step 3: Get the EC2 instance IP
           EC2_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
           echo "EC2 Public IP is $EC2_IP"
 
@@ -109,19 +110,21 @@ jobs:
             git clone https://github.com/Lonewolfrex/cyberdemo.git
             cd cyberdemo
             
-          # Install requirements 
+          # Step7: Install requirements 
             pip3 install -r requirements.txt
             cd contactListApp
             sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
             python3 manage.py collectstatic --noinput
 
-          # Run migrations to set up the database 
+          # Step8: Run migrations to set up the database 
             python3 manage.py makemigrations
             python3 manage.py migrate
             
-          # Start the Django development server and scan for vulnerabilities using zap
+          # Step9: Start the Django development server and scan for vulnerabilities using zap
             python3 manage.py runserver 0.0.0.0:8000 &
             sleep 30
+
+          # Step10: Scan for vulnerabilities
             curl "http://$EC2_IP:8081/JSON/ascan/action/scan/?url=http://$EC2_IP:8000&apikey=$ZAP_API_KEY"
             sleep 300
             exit
