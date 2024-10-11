@@ -106,7 +106,7 @@ jobs:
                 cd ZAP_2.14.0/
                 sudo yum install java-17 -y
                 java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
-                sleep 15
+                sleep 30
                 if ! curl -s "http://127.0.0.1:8080/JSON/core/view/version"; then
                     echo "ZAP did not start correctly."
                     exit 1
