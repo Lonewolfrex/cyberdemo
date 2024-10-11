@@ -30,6 +30,36 @@ jobs:
       - name: Check Java Version
         run: java -version
 
+      - name: Run SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          # Download a compatible version of SonarScanner with error handling
+          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+          
+          # Check if the download was successful
+          if [ ! -f sonarqube-scanner.zip ]; then
+            echo "Download failed!"
+            exit 1
+          fi
+          
+          # Unzip the downloaded scanner
+          unzip sonarqube-scanner.zip
+          
+          # Check if unzip was successful
+          if [ $? -ne 0 ]; then
+            echo "Unzip failed! The downloaded file may be corrupt."
+            exit 1
+          fi
+  
+          # Run SonarScanner
+          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -64,7 +94,8 @@ jobs:
 
       - name: Install Dependencies and Run App on EC2 Instance
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }} <<EOF
+          EC2_IP=${{ steps.get_ip.outputs.ec2_ip }}
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
             
             # Step5: Download and install OWASP ZAP
             pkill -f zap-2.14.0.jar || true
