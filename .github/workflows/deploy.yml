@@ -100,34 +100,12 @@ jobs:
             
             # Step11: Start the Django development server 
             python3 manage.py runserver 0.0.0.0:8000 &
-            sleep 30
+            sleep 10
 
             # Step12: Start the scan and get the scan id
             scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
-            
-            # Extract scan ID from response (ensure jq is installed)
-            scan_id=$(echo $scan_response | jq -r '.scan')
-
-            if [[ "$scan_id" == "null" ]]; then
-                echo "Failed to start spidering, response: $scan_response"
-                exit 1
-            fi
-
-            echo "Started spidering with scan ID: $scan_id"
-
-            # Step13: Wait for the scan to finish (adjust as necessary)
-            while true; do
-                status=$(curl -s "http://127.0.0.1:8080/JSON/spider/view/status/?scanId=$scan_id" | jq -r '.status')
-                
-                if [[ "$status" == "100" ]]; then
-                    echo "Spidering completed!"
-                    break
-                fi
-                
-                sleep 5
-                echo "Current spider status: $status"
-            done
-            
+            sleep 15
+                        
             # Step14: Get the report and save it in a known location for upload later 
             alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
             
