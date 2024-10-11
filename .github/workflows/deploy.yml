@@ -133,15 +133,16 @@ jobs:
             
           # Step13: Get the report
             alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
-            echo "$alerts" > zap_scan_results.json
+            echo "$alerts" > /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
 
           # Debugging line to verify file creation
             if [ -f zap_scan_results.json ]; then
                 echo "File zap_scan_results.json created successfully."
             else
                 echo "Failed to create zap_scan_results.json."
+                exit 1
             fi
-            exit
+            
           EOF
            
       - name: Upload zap Scan spidering Results
