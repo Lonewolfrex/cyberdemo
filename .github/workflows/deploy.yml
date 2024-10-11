@@ -127,6 +127,7 @@ jobs:
 
           # Step11: Start the scan and get the scan id
             scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
+            echo "Scan Response: $scan_response"
             scan_id=$(echo $scan_response | jq -r '.scan')
             echo $scan_id
 
