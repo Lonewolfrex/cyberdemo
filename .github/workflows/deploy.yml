@@ -107,11 +107,14 @@ jobs:
                 sudo yum install java-17 -y
                 java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
                 sleep 15
+                if ! curl -s "http://127.0.0.1:8080/JSON/core/view/version"; then
+                    echo "ZAP did not start correctly."
+                    exit 1
+                fi
 
             # Step3: Update and install necessary packages
                 sudo yum update -y
-                sudo yum install python3 python3-pip git -y
-                sudo yum install jq -y
+                sudo yum install python3 python3-pip git jq -y
             
             # Step4: Clone the Django app repository and install requirements 
                 cd /home/ec2-user/
@@ -134,8 +137,8 @@ jobs:
 
             # Step8: Start the scan and get the scan id
                 scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
-                scan_id=$(echo $scan_response | jq -r '.scan')
                 echo "Scan response: $scan_response"
+                scan_id=$(echo $scan_response | jq -r '.scan')
                 echo "Scan ID: $scan_id"
 
                 if [[ "$scan_id" == "null" ]]; then
@@ -172,7 +175,7 @@ jobs:
 
                 echo "Active Scan response: $active_scan_response"
                 echo "Active Scan ID: $active_scan_id"
-                
+
                 if [[ "$active_scan_id" == "null" ]]; then
                     echo "Failed to start active scanning, response: $active_scan_response"
                     exit 1
