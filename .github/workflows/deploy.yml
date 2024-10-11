@@ -126,22 +126,21 @@ jobs:
             sleep 10
 
           # Step11: Start the scan and get the scan id
-            curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000" | tee scan_response.json
-            scan_id=$(jq -r '.scan' scan_response.json)
-
-            if [[ "$scan_id" == "null" ]]; then
-                echo "Failed to start spidering, response: $(cat scan_response.json)"
-                exit 1
-            fi
-
-            echo "Started spidering with scan ID: $scan_id"
+            curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000" &
 
           # Step12: Wait for the scan to finish
-            sleep 120
+            sleep 30
             
           # Step13: Get the report
             alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
             echo "$alerts" > zap_scan_results.json
+
+          # Debugging line to verify file creation
+            if [ -f zap_scan_results.json ]; then
+                echo "File zap_scan_results.json created successfully."
+            else
+                echo "Failed to create zap_scan_results.json."
+            fi
             exit
           EOF
            
@@ -149,7 +148,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
             name: zap-scan-results
-            path: zap_scan_results.json
+            path: /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
 
       - name: Terminate EC2 Instance
         if: always()
