@@ -30,35 +30,35 @@ jobs:
       - name: Check Java Version
         run: java -version
 
-      - name: Run SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # Download a compatible version of SonarScanner with error handling
-          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+      # - name: Run SonarCloud Scan
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: |
+      #     # Download a compatible version of SonarScanner with error handling
+      #     curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
           
-          # Check if the download was successful
-          if [ ! -f sonarqube-scanner.zip ]; then
-            echo "Download failed!"
-            exit 1
-          fi
+      #     # Check if the download was successful
+      #     if [ ! -f sonarqube-scanner.zip ]; then
+      #       echo "Download failed!"
+      #       exit 1
+      #     fi
           
-          # Unzip the downloaded scanner
-          unzip sonarqube-scanner.zip
+      #     # Unzip the downloaded scanner
+      #     unzip sonarqube-scanner.zip
           
-          # Check if unzip was successful
-          if [ $? -ne 0 ]; then
-            echo "Unzip failed! The downloaded file may be corrupt."
-            exit 1
-          fi
+      #     # Check if unzip was successful
+      #     if [ $? -ne 0 ]; then
+      #       echo "Unzip failed! The downloaded file may be corrupt."
+      #       exit 1
+      #     fi
   
-          # Run SonarScanner
-          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      #     # Run SonarScanner
+      #     ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+      #       -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+      #       -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+      #       -Dsonar.sources=. \
+      #       -Dsonar.host.url=https://sonarcloud.io \
+      #       -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -96,7 +96,7 @@ jobs:
             tar -xzf ZAP_2.14.0_Linux.tar.gz
             cd ZAP_2.14.0/
             sudo yum install java-17 -y
-            java -Duser.home=/home/ec2-user/.ZAP_$INSTANCE_ID -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
+            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
             sleep 15
 
           # Step6:Update and install necessary packages
@@ -123,7 +123,6 @@ jobs:
 
           # Step10: Start the zap
             cd /home/ec2-user/ZAP_2.14.0/
-            # java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
             sleep 10
 
           # Step11: Start the scan and get the scan id
