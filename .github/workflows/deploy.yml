@@ -126,10 +126,15 @@ jobs:
             sleep 10
 
           # Step11: Start the scan and get the scan id
-            scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
-            echo "Scan Response: $scan_response"
-            scan_id=$(echo $scan_response | jq -r '.scan')
-            echo $scan_id
+            curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000" | tee scan_response.json
+            scan_id=$(jq -r '.scan' scan_response.json)
+
+            if [[ "$scan_id" == "null" ]]; then
+                echo "Failed to start spidering, response: $(cat scan_response.json)"
+                exit 1
+            fi
+
+            echo "Started spidering with scan ID: $scan_id"
 
           # Step12: Wait for the scan to finish
             while true; do
