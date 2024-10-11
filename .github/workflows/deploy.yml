@@ -75,32 +75,27 @@ jobs:
 
       - name: Launch EC2 Instance and Deploy Django App
         run: |
-          ZAP_API_KEY=${{ secrets.ZAP_API_KEY }}
           # Step 1: Launch EC2 instance and get instance ID
-          INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
-          echo "Launched instance ID: $INSTANCE_ID"
+            INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
+            echo "Launched instance ID: $INSTANCE_ID"
 
           # Step 2: Wait for the instance to be running
-          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
-          sleep 10
+            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+            sleep 10
 
           # Step 3: Get the EC2 instance IP
-          EC2_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "EC2 Public IP is $EC2_IP"
+            EC2_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+            echo "EC2 Public IP is $EC2_IP"
 
           # Step 4: Install Python, pip, and other dependencies, then run the app (using SSH)
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
             
           # Step5: Download and install OWASP ZAP
             wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
             tar -xzf ZAP_2.14.0_Linux.tar.gz
             cd ZAP_2.14.0/
             sudo yum install java-17 -y
-            # Start ZAP in daemon mode with an API key 
-            ./zap.sh -daemon -host 0.0.0.0 -port 8081 -config api.key=$ZAP_API_KEY &
-            
-            # Wait for ZAP to start (adjust time as necessary)
-            sleep 30
+            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
           
           # Step6:Update and install necessary packages
             sudo yum update -y
@@ -124,16 +119,41 @@ jobs:
             python3 manage.py runserver 0.0.0.0:8000 &
             sleep 30
 
-          # Step10: Scan for vulnerabilities
-            curl "http://$EC2_IP:8081/JSON/ascan/action/scan/?url=http://$EC2_IP:8000&apikey=$ZAP_API_KEY"
-            sleep 300
+          # Step10: Start the zap
+            cd /home/ec2-user/ZAP_2.14.0/
+            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
+
+          # Step11: Start the scan and get the scan id
+            scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
+            scan_id=$(echo $scan_response | jq -r '.scan')
+
+          # Step12: Wait for the scan to finish
+            while true; do
+              status=$(curl -s "http://127.0.0.1:8080/JSON/spider/view/status/?scanId=$scan_id" | jq -r '.status')
+              echo "Spider progress: $status%"
+              if [ "$status" -eq 100 ]; then
+                  echo "Spidering completed!"
+                  break
+              fi
+              sleep 5
+            done
+            
+          # Step13: Get the report
+            alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
+            echo "$alerts" > zap_scan_results.json
             exit
           EOF
            
+      - name: Upload zap Scan spidering Results
+        uses: actions/upload-artifact@v4
+        with:
+            name: zap-scan-results
+            path: zap_scan_results.json
 
-      # - name: Terminate EC2 Instance
-      #   if: always()
-      #   run: |
-      #     INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
-      #     echo "Launched instance ID: $INSTANCE_ID"
-      #     aws ec2 terminate-instances --instance-ids $INSTANCE_ID
+      - name: Terminate EC2 Instance
+        if: always()
+        run: |
+          INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
+          echo "Launched instance ID: $INSTANCE_ID"
+          aws ec2 terminate-instances --instance-ids $INSTANCE_ID
+          
