@@ -88,7 +88,7 @@ jobs:
             echo "EC2 Public IP is $EC2_IP"
 
           # Step 4: Install Python, pip, and other dependencies, then run the app (using SSH)
-            ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
+            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
             
           # Step5: Download and install OWASP ZAP
             pkill -f zap-2.14.0.jar || true
@@ -96,7 +96,9 @@ jobs:
             tar -xzf ZAP_2.14.0_Linux.tar.gz
             cd ZAP_2.14.0/
             sudo yum install java-17 -y
-          
+            java -Duser.home=/home/ec2-user/.ZAP_$INSTANCE_ID -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
+            sleep 15
+
           # Step6:Update and install necessary packages
             sudo yum update -y
             sudo yum install python3 python3-pip -y
@@ -121,8 +123,8 @@ jobs:
 
           # Step10: Start the zap
             cd /home/ec2-user/ZAP_2.14.0/
-            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
-            sleep 15
+            # java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
+            sleep 10
 
           # Step11: Start the scan and get the scan id
             scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
