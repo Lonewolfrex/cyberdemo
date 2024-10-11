@@ -157,11 +157,9 @@ jobs:
           EOF
 
       # Upload zap Scan spidering Results after exiting SSH session 
-      - name: Upload zap Scan spidering Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-scan-results
-          path: /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
+      - name: Upload zap Scan spidering Results in the github artifact
+        run: |
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }}:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json
 
       # Terminate EC2 Instance after uploading results 
       - name: Terminate EC2 Instance 
