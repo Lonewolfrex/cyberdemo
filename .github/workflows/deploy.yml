@@ -135,7 +135,7 @@ jobs:
               scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
               sleep 15
               active_scan_response=$(curl -s "http://127.0.0.1:8080/JSON/ascan/action/scan/?url=http://127.0.0.1:8000")
-              sleep 600
+              sleep 12000
 
             # Step9: Get the report and save it in a known location for upload later 
               alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
