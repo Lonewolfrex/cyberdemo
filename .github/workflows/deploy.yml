@@ -91,11 +91,11 @@ jobs:
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
             
           # Step5: Download and install OWASP ZAP
+            pkill -f zap-2.14.0.jar || true
             wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
             tar -xzf ZAP_2.14.0_Linux.tar.gz
             cd ZAP_2.14.0/
             sudo yum install java-17 -y
-            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
           
           # Step6:Update and install necessary packages
             sudo yum update -y
@@ -123,10 +123,11 @@ jobs:
             cd /home/ec2-user/ZAP_2.14.0/
             java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
             sleep 15
-            
+
           # Step11: Start the scan and get the scan id
             scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
             scan_id=$(echo $scan_response | jq -r '.scan')
+            echo $scan_id
 
           # Step12: Wait for the scan to finish
             while true; do
