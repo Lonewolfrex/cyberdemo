@@ -97,64 +97,63 @@ jobs:
           EC2_IP=${{ steps.get_ip.outputs.ec2_ip }}
           ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
             
-            # Step5: Download and install OWASP ZAP
-            pkill -f zap-2.14.0.jar || true
-            wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
-            tar -xzf ZAP_2.14.0_Linux.tar.gz
+            # Step1: Download and install OWASP ZAP
+              pkill -f zap-2.14.0.jar || true
+              wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
+              tar -xzf ZAP_2.14.0_Linux.tar.gz
             
-            # Step6: Install Java and Start ZAP in daemon mode
-            cd ZAP_2.14.0/
-            sudo yum install java-17 -y
-            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
-            sleep 15
+            # Step2: Install Java and Start ZAP in daemon mode
+              cd ZAP_2.14.0/
+              sudo yum install java-17 -y
+              java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
+              sleep 15
 
-            # Step7: Update and install necessary packages
-            sudo yum update -y
-            sudo yum install python3 python3-pip git -y
+            # Step3: Update and install necessary packages
+              sudo yum update -y
+              sudo yum install python3 python3-pip git -y
             
-            # Step8: Clone the Django app repository and install requirements 
-            cd /home/ec2-user/
-            git clone https://github.com/Lonewolfrex/cyberdemo.git
-            cd cyberdemo
+            # Step4: Clone the Django app repository and install requirements 
+              cd /home/ec2-user/
+              git clone https://github.com/Lonewolfrex/cyberdemo.git
+              cd cyberdemo
+              pip3 install -r requirements.txt
+              cd contactListApp
             
-            pip3 install -r requirements.txt
-            
-            cd contactListApp
-            
-            # Step9: Update settings for ALLOWED_HOSTS and collect static files 
-            sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
-            python3 manage.py collectstatic --noinput
+            # Step5: Update settings for ALLOWED_HOSTS and collect static files 
+              sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
+              python3 manage.py collectstatic --noinput
 
-            # Step10: Run migrations to set up the database 
-            python3 manage.py makemigrations
-            python3 manage.py migrate
+            # Step6: Run migrations to set up the database 
+              python3 manage.py makemigrations
+              python3 manage.py migrate
             
-            # Step11: Start the Django development server 
-            python3 manage.py runserver 0.0.0.0:8000 &
-            sleep 10
+            # Step7: Start the Django development server 
+              python3 manage.py runserver 0.0.0.0:8000 &
+              sleep 10
 
-            # Step12: Start the scan and get the scan id
-            scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
-            sleep 15
-                        
-            # Step14: Get the report and save it in a known location for upload later 
-            alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
-            
-            echo "$alerts" > /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
-            
-            if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
-                echo "File zap_scan_results.json created successfully."
-                cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
-                sleep 120
-                pkill -f manage.py || true
-                pkill -f zap-2.14.0.jar || true
-                echo "Django server and ZAP processes terminated."
+            # Step8: Start the scan and get the scan id
+              scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
+              sleep 15
+              active_scan_response=$(curl -s "http://127.0.0.1:8080/JSON/ascan/action/scan/?url=http://127.0.0.1:8000")
+              sleep 600
 
-            else
-                echo "Failed to create zap_scan_results.json."
-                exit 1
-            fi
-            exit
+            # Step9: Get the report and save it in a known location for upload later 
+              alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
+              echo "$alerts" > /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
+              
+              if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
+                  echo "File zap_scan_results.json created successfully."
+                  cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
+                  sleep 30
+                  pkill -f manage.py || true
+                  pkill -f zap-2.14.0.jar || true
+                  echo "Django server and ZAP processes terminated."
+
+              else
+                  echo "Failed to create zap_scan_results.json."
+                  exit 1
+              fi
+              exit
           EOF
 
       # Upload zap Scan spidering Results after exiting SSH session 
