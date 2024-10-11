@@ -114,11 +114,15 @@ jobs:
             if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
                 echo "File zap_scan_results.json created successfully."
                 cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
+                pkill -f manage.py || true
+                pkill -f zap-2.14.0.jar || true
+                echo "Django server and ZAP processes terminated."
+
             else
                 echo "Failed to create zap_scan_results.json."
                 exit 1
             fi
-            
+            exit
           EOF
 
       # Upload zap Scan spidering Results after exiting SSH session 
