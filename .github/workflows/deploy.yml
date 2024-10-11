@@ -122,7 +122,8 @@ jobs:
           # Step10: Start the zap
             cd /home/ec2-user/ZAP_2.14.0/
             java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
-
+            sleep 15
+            
           # Step11: Start the scan and get the scan id
             scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
             scan_id=$(echo $scan_response | jq -r '.scan')
