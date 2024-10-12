@@ -119,7 +119,7 @@ jobs:
               sleep 10
 
             # Step5: 
-              chmod 777 ./home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+              chmod 777 /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
               ./home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
 
             # Step6 :
