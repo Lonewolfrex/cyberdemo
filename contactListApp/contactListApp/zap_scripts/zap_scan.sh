@@ -28,7 +28,7 @@ for i in {1..3}; do
         break
     else
         echo "ZAP did not start correctly, retrying... ($i)"
-        sleep 10  # Wait before retrying.
+        sleep 10  # Wait before retrying
     fi
 done
 
