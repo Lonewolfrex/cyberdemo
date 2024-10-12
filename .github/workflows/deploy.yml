@@ -120,7 +120,7 @@ jobs:
 
             # Step5: 
               cd /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts
-              ./zap_scan.sh &
+              ./zap_scan.sh
 
             # Step6:
             if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then

@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Step1: Download and install OWASP ZAP
+cd /home/ec2-user/
+
 pkill -f zap-2.14.0.jar || true
 wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
 tar -xzf ZAP_2.14.0_Linux.tar.gz
