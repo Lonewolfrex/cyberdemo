@@ -151,6 +151,12 @@ jobs:
               exit 1
           fi
 
+      - name: Upload zap Scan Results as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+            name: zap-scan-results
+            path: ./zap_scan_results.json
+
       # Terminate EC2 Instance after uploading results 
       - name: Terminate EC2 Instance 
         if: always()
