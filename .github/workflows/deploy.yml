@@ -30,35 +30,35 @@ jobs:
       - name: Check Java Version
         run: java -version
 
-      - name: Run SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # Download a compatible version of SonarScanner with error handling
-          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+      # - name: Run SonarCloud Scan
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: |
+      #     # Download a compatible version of SonarScanner with error handling
+      #     curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
           
-          # Check if the download was successful
-          if [ ! -f sonarqube-scanner.zip ]; then
-            echo "Download failed!"
-            exit 1
-          fi
+      #     # Check if the download was successful
+      #     if [ ! -f sonarqube-scanner.zip ]; then
+      #       echo "Download failed!"
+      #       exit 1
+      #     fi
           
-          # Unzip the downloaded scanner
-          unzip sonarqube-scanner.zip
+      #     # Unzip the downloaded scanner
+      #     unzip sonarqube-scanner.zip
           
-          # Check if unzip was successful
-          if [ $? -ne 0 ]; then
-            echo "Unzip failed! The downloaded file may be corrupt."
-            exit 1
-          fi
+      #     # Check if unzip was successful
+      #     if [ $? -ne 0 ]; then
+      #       echo "Unzip failed! The downloaded file may be corrupt."
+      #       exit 1
+      #     fi
   
-          # Run SonarScanner
-          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      #     # Run SonarScanner
+      #     ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+      #       -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+      #       -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+      #       -Dsonar.sources=. \
+      #       -Dsonar.host.url=https://sonarcloud.io \
+      #       -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -96,52 +96,33 @@ jobs:
         run: |
           EC2_IP=${{ steps.get_ip.outputs.ec2_ip }}
           ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
-            
-            # Step5: Download and install OWASP ZAP
-            pkill -f zap-2.14.0.jar || true
-            wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
-            tar -xzf ZAP_2.14.0_Linux.tar.gz
-            
-            # Step6: Install Java and Start ZAP in daemon mode
-            cd ZAP_2.14.0/
-            sudo yum install java-17 -y
-            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
-            sleep 15
-
-            # Step7: Update and install necessary packages
-            sudo yum update -y
-            sudo yum install python3 python3-pip git -y
-            
-            # Step8: Clone the Django app repository and install requirements 
-            cd /home/ec2-user/
-            git clone https://github.com/Lonewolfrex/cyberdemo.git
-            cd cyberdemo
-            
-            pip3 install -r requirements.txt
-            
-            cd contactListApp
-            
-            # Step9: Update settings for ALLOWED_HOSTS and collect static files 
-            sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
-            python3 manage.py collectstatic --noinput
-
-            # Step10: Run migrations to set up the database 
-            python3 manage.py makemigrations
-            python3 manage.py migrate
-            
-            # Step11: Start the Django development server 
-            python3 manage.py runserver 0.0.0.0:8000 &
-            sleep 10
-
-            # Step12: Start the scan and get the scan id
-            scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
-            sleep 15
                         
-            # Step14: Get the report and save it in a known location for upload later 
-            alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
+            # Step1: Update and install necessary packages
+              sudo yum update -y
+              sudo yum install python3 python3-pip git jq -y
             
-            echo "$alerts" > /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
+            # Step2: Clone the Django app repository and install requirements 
+              cd /home/ec2-user/
+              git clone https://github.com/Lonewolfrex/cyberdemo.git
+              cd cyberdemo
+              pip3 install -r requirements.txt
+              cd contactListApp
             
+            # Step3: Update settings for ALLOWED_HOSTS and collect static files 
+              sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
+              python3 manage.py collectstatic --noinput
+
+            # Step4: Run migrations to set up the database and Start the Django development server 
+              python3 manage.py makemigrations
+              python3 manage.py migrate
+              python3 manage.py runserver 0.0.0.0:8000 &
+              sleep 10
+
+            # Step5: 
+              chmod 777 ./home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+              ./home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+
+            # Step6 :
             if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
                 echo "File zap_scan_results.json created successfully."
                 cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
