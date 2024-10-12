@@ -96,128 +96,33 @@ jobs:
         run: |
           EC2_IP=${{ steps.get_ip.outputs.ec2_ip }}
           ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
+                        
+            # Step1: Update and install necessary packages
+              sudo yum update -y
+              sudo yum install python3 python3-pip git jq -y
             
-            # Step 1: Download and install OWASP ZAP
-            pkill -f zap-2.14.0.jar || true
-            wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
-            tar -xzf ZAP_2.14.0_Linux.tar.gz
+            # Step2: Clone the Django app repository and install requirements 
+              cd /home/ec2-user/
+              git clone https://github.com/Lonewolfrex/cyberdemo.git
+              cd cyberdemo
+              pip3 install -r requirements.txt
+              cd contactListApp
             
-            # Step 2: Install Java and Start ZAP in daemon mode
-            cd ZAP_2.14.0/
-            sudo yum install java-17 -y
-            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
-            sleep 15
+            # Step3: Update settings for ALLOWED_HOSTS and collect static files 
+              sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
+              python3 manage.py collectstatic --noinput
 
-            # Step7: Update and install necessary packages
-            sudo yum update -y
-            sudo yum install python3 python3-pip git jq -y
-            
-            # Step8: Clone the Django app repository and install requirements 
-            cd /home/ec2-user/
-            git clone https://github.com/Lonewolfrex/cyberdemo.git
-            cd cyberdemo
-            
-            pip3 install -r requirements.txt
-            
-            cd contactListApp
-            
-            # Step9: Update settings for ALLOWED_HOSTS and collect static files 
-            sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
-            python3 manage.py collectstatic --noinput
+            # Step4: Run migrations to set up the database and Start the Django development server 
+              python3 manage.py makemigrations
+              python3 manage.py migrate
+              python3 manage.py runserver 0.0.0.0:8000 &
+              sleep 10
 
-            # Step10: Run migrations to set up the database 
-            python3 manage.py makemigrations
-            python3 manage.py migrate
-            
-            # Step11: Start the Django development server 
-            python3 manage.py runserver 0.0.0.0:8000 &
-            sleep 10
+            # Step5: 
+              cd /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts
+              ./zap_scan.sh &
 
-            # Step8: Start the spider scan and get the scan id
-              scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
-              scan_id=$(echo $scan_response | jq -r '.scan')
-
-              echo "Scan response: $scan_response"
-              echo "Scan ID: $scan_id"
-
-              if [[ "$scan_id" == "null" ]]; then
-                  echo "Failed to start spidering, response: $scan_response"
-                  exit 1
-              fi
-
-              echo "Started spidering with scan ID: $scan_id"
-
-              # Step9: Wait for the spider scan to finish
-              while true; do
-                  status=$(curl -s "http://127.0.0.1:8080/JSON/spider/view/status/?scanId=$scan_id" | jq -r '.status')
-                  
-                  echo "Spider status: $status"  # Debugging output
-                  
-                  # Check if status is empty before comparison
-                  if [[ -z "$status" ]]; then
-                      echo "No status received, exiting."
-                      exit 1 
-                  fi 
-
-                  if [[ "$status" == "100" ]]; then
-                      echo "Spidering completed!"
-                      break
-                  fi
-                  
-                  sleep 5
-                  
-                  if [[ "$status" == "error" ]]; then 
-                      echo "Error during spider scanning, exiting."
-                      exit 1 
-                  fi 
-                  
-                  echo "Current spider status: $status"
-              done              
-
-              # Step10: Start Active Scan after Spidering completes 
-              active_scan_response=$(curl -s "http://127.0.0.1:8080/JSON/ascan/action/scan/?url=http://127.0.0.1:8000")
-              active_scan_id=$(echo $active_scan_response | jq -r '.scan')
-
-              echo "Active Scan response: $active_scan_response"
-              if [[ "$active_scan_id" == "null" ]]; then
-                  echo "Failed to start active scanning, response: $active_scan_response"
-                  exit 1
-              fi
-
-              echo "Started active scanning with scan ID: $active_scan_id"
-
-              # Step11: Wait for the active scan to finish
-              while true; do
-                  active_status=$(curl -s "http://127.0.0.1:8080/JSON/ascan/view/status/?scanId=$active_scan_id" | jq -r '.status')
-                  
-                  echo "Active Scan status: $active_status"  # Debugging output
-
-                  # Check if active_status is empty before comparison
-                  if [[ -z "$active_status" ]]; then 
-                      echo "No status received, exiting."
-                      exit 1 
-                  fi 
-
-                  if [[ "$active_status" == "100" ]]; then
-                      echo "Active scanning completed!"
-                      break
-                  fi
-                  
-                  sleep 5
-                  
-                  if [[ "$active_status" == "error" ]]; then 
-                      echo "Error during active scanning, exiting."
-                      exit 1 
-                  fi 
-
-                  echo "Current active scan status: $active_status"
-              done  
-
-            # Step14: Get the report and save it in a known location for upload later 
-            alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
-            
-            echo "$alerts" > /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
-            
+            # Step6:
             if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
                 echo "File zap_scan_results.json created successfully."
                 cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
