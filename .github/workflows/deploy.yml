@@ -30,35 +30,35 @@ jobs:
       - name: Check Java Version
         run: java -version
 
-      # - name: Run SonarCloud Scan
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #   run: |
-      #     # Download a compatible version of SonarScanner with error handling
-      #     curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+      - name: Run SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          # Download a compatible version of SonarScanner with error handling
+          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
           
-      #     # Check if the download was successful
-      #     if [ ! -f sonarqube-scanner.zip ]; then
-      #       echo "Download failed!"
-      #       exit 1
-      #     fi
+          # Check if the download was successful
+          if [ ! -f sonarqube-scanner.zip ]; then
+            echo "Download failed!"
+            exit 1
+          fi
           
-      #     # Unzip the downloaded scanner
-      #     unzip sonarqube-scanner.zip
+          # Unzip the downloaded scanner
+          unzip sonarqube-scanner.zip
           
-      #     # Check if unzip was successful
-      #     if [ $? -ne 0 ]; then
-      #       echo "Unzip failed! The downloaded file may be corrupt."
-      #       exit 1
-      #     fi
+          # Check if unzip was successful
+          if [ $? -ne 0 ]; then
+            echo "Unzip failed! The downloaded file may be corrupt."
+            exit 1
+          fi
   
-      #     # Run SonarScanner
-      #     ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
-      #       -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-      #       -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-      #       -Dsonar.sources=. \
-      #       -Dsonar.host.url=https://sonarcloud.io \
-      #       -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          # Run SonarScanner
+          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
