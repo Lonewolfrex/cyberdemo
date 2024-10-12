@@ -139,7 +139,17 @@ jobs:
 
       - name: Upload zap Scan Results
         run: |
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }}:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }}:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json || { echo "SCP failed"; exit 1; }
+
+      # Verify if the file was uploaded successfully
+      - name: Verify Uploaded File
+        run: |
+          if [ -f ./zap_scan_results.json ]; then
+              echo "Scan results uploaded successfully."
+          else
+              echo "Failed to upload scan results."
+              exit 1
+          fi
 
       # Terminate EC2 Instance after uploading results 
       - name: Terminate EC2 Instance 
