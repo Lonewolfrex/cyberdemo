@@ -122,7 +122,7 @@ jobs:
               cd /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts
               ./zap_scan.sh
 
-            # Step6:
+            # Step6 :
             if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
                 echo "File zap_scan_results.json created successfully."
                 cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
