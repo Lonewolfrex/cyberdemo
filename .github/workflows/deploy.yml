@@ -30,35 +30,35 @@ jobs:
       - name: Check Java Version
         run: java -version
 
-      - name: Run SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # Download a compatible version of SonarScanner with error handling
-          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+      # - name: Run SonarCloud Scan
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: |
+      #     # Download a compatible version of SonarScanner with error handling
+      #     curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
           
-          # Check if the download was successful
-          if [ ! -f sonarqube-scanner.zip ]; then
-            echo "Download failed!"
-            exit 1
-          fi
+      #     # Check if the download was successful
+      #     if [ ! -f sonarqube-scanner.zip ]; then
+      #       echo "Download failed!"
+      #       exit 1
+      #     fi
           
-          # Unzip the downloaded scanner
-          unzip sonarqube-scanner.zip
+      #     # Unzip the downloaded scanner
+      #     unzip sonarqube-scanner.zip
           
-          # Check if unzip was successful
-          if [ $? -ne 0 ]; then
-            echo "Unzip failed! The downloaded file may be corrupt."
-            exit 1
-          fi
+      #     # Check if unzip was successful
+      #     if [ $? -ne 0 ]; then
+      #       echo "Unzip failed! The downloaded file may be corrupt."
+      #       exit 1
+      #     fi
   
-          # Run SonarScanner
-          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      #     # Run SonarScanner
+      #     ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+      #       -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+      #       -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+      #       -Dsonar.sources=. \
+      #       -Dsonar.host.url=https://sonarcloud.io \
+      #       -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -97,150 +97,94 @@ jobs:
           EC2_IP=${{ steps.get_ip.outputs.ec2_ip }}
           ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
             
-            # Step1: Download and install OWASP ZAP
+            # Step 1: Download and install OWASP ZAP
+            pkill -f zap-2.14.0.jar || true
+            wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
+            tar -xzf ZAP_2.14.0_Linux.tar.gz
+            
+            # Step 2: Install Java and Start ZAP in daemon mode
+            cd ZAP_2.14.0/
+            sudo yum install java-17 -y
+            java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
+            sleep 15
+
+            # Step7: Update and install necessary packages
+            sudo yum update -y
+            sudo yum install python3 python3-pip git jq -y
+            
+            # Step8: Clone the Django app repository and install requirements 
+            cd /home/ec2-user/
+            git clone https://github.com/Lonewolfrex/cyberdemo.git
+            cd cyberdemo
+            
+            pip3 install -r requirements.txt
+            
+            cd contactListApp
+            
+            # Step9: Update settings for ALLOWED_HOSTS and collect static files 
+            sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
+            python3 manage.py collectstatic --noinput
+
+            # Step10: Run migrations to set up the database 
+            python3 manage.py makemigrations
+            python3 manage.py migrate
+            
+            # Step11: Start the Django development server 
+            python3 manage.py runserver 0.0.0.0:8000 &
+            sleep 10
+
+            # Step12: Start the spider scan and get the scan id
+            scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
+            sleep 15
+                        
+            while true; do
+                status=$(curl -s "http://127.0.0.1:8080/JSON/spider/view/status/?scanId=0" | jq -r '.status')
+                echo "Spider progress: $status%"
+                if [ "$status" -eq 100 ]; then
+                    echo "Spidering completed!"
+                    break
+                fi
+                sleep 5
+            done
+
+            scan_response=$(curl -s "http://127.0.0.1:8080/JSON/ascan/action/scan/?url=http://127.0.0.1:8000")
+            sleep 15
+                        
+            while true; do
+                status=$(curl -s "http://127.0.0.1:8080/JSON/ascan/view/status/?scanId=1" | jq -r '.status')
+                echo "Spider progress: $status%"
+                if [ "$status" -eq 100 ]; then
+                    echo "Spidering completed!"
+                    break
+                fi
+                sleep 5
+            done
+
+            # Step14: Get the report and save it in a known location for upload later 
+            alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
+            
+            echo "$alerts" > /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
+            
+            if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
+                echo "File zap_scan_results.json created successfully."
+                cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
+                pkill -f manage.py || true
                 pkill -f zap-2.14.0.jar || true
-                wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
-                tar -xzf ZAP_2.14.0_Linux.tar.gz
-            
-            # Step2: Install Java and Start ZAP in daemon mode
-                cd ZAP_2.14.0/
-                sudo yum install java-17 -y
+                echo "Django server and ZAP processes terminated."
 
-                check_zap_running() {
-                                curl -s "http://127.0.0.1:8080/JSON/core/view/version" > /dev/null
-                                return $?
-                            }
-
-                java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
-                sleep 30
-              # Check if ZAP is running, retry up to 3 times if not
-                for i in {1..3}; do
-                    if check_zap_running; then
-                        echo "ZAP started successfully."
-                        break
-                    else
-                        echo "ZAP did not start correctly, retrying... ($i)"
-                        sleep 10  # Wait before retrying
-                    fi
-                done
-
-            # Step3: Update and install necessary packages
-                sudo yum update -y
-                sudo yum install python3 python3-pip git jq -y
-            
-            # Step4: Clone the Django app repository and install requirements 
-                cd /home/ec2-user/
-                git clone https://github.com/Lonewolfrex/cyberdemo.git
-                cd cyberdemo
-                pip3 install -r requirements.txt
-                cd contactListApp
-            
-            # Step5: Update settings for ALLOWED_HOSTS and collect static files 
-                sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
-                python3 manage.py collectstatic --noinput
-
-            # Step6: Run migrations to set up the database 
-                python3 manage.py makemigrations
-                python3 manage.py migrate
-            
-            # Step7: Start the Django development server 
-                python3 manage.py runserver 0.0.0.0:8000 &
-                sleep 10
-
-            # Step8: Start the scan and get the scan id
-                scan_response=$(curl -s "http://127.0.0.1:8080/JSON/spider/action/scan/?url=http://127.0.0.1:8000")
-                echo "Scan response: $scan_response"
-                scan_id=$(echo $scan_response | jq -r '.scan')
-                echo "Scan ID: $scan_id"
-
-                if [[ "$scan_id" == "null" ]]; then
-                    echo "Failed to start spidering, response: $scan_response"
-                    exit 1
-                fi
-                echo "Started spidering with scan ID: $scan_id"
-
-                while true; do
-                    status=$(curl -s "http://127.0.0.1:8080/JSON/spider/view/status/?scanId=$scan_id" | jq -r '.status')
-                    echo "Spider status: $status"
-                    if [[ "$status" == "100" ]]; then
-                        echo "Spidering completed!"
-                        break
-                    fi
-                    
-                    sleep 5
-                    
-                    if [[ "$status" == "" ]]; then 
-                        echo "No status received, exiting."
-                        exit 1 
-                    fi 
-                    
-                    if [[ "$status" == "error" ]]; then 
-                        echo "Error during spider scanning, exiting."
-                        exit 1 
-                    fi 
-                    
-                    echo "Current spider status: $status"
-                done              
-
-                active_scan_response=$(curl -s "http://127.0.0.1:8080/JSON/ascan/action/scan/?url=http://127.0.0.1:8000")
-                active_scan_id=$(echo $active_scan_response | jq -r '.scan')
-
-                echo "Active Scan response: $active_scan_response"
-                echo "Active Scan ID: $active_scan_id"
-
-                if [[ "$active_scan_id" == "null" ]]; then
-                    echo "Failed to start active scanning, response: $active_scan_response"
-                    exit 1
-                fi
-
-                echo "Started active scanning with scan ID: $active_scan_id"
-
-              # Step11: Wait for the active scan to finish
-                  while true; do
-                      active_status=$(curl -s "http://127.0.0.1:8080/JSON/ascan/view/status/?scanId=$active_scan_id" | jq -r '.status')
-                      
-                      if [[ "$active_status" == "100" ]]; then
-                          echo "Active scanning completed!"
-                          break
-                      fi
-                      
-                      sleep 5
-                      
-                      if [[ "$active_status" == "" ]]; then 
-                          echo "No status received, exiting."
-                          exit 1 
-                      fi 
-
-                      if [[ "$active_status" == "error" ]]; then 
-                          echo "Error during active scanning, exiting."
-                          exit 1 
-                      fi 
-
-                      echo "Current active scan status: $active_status"
-                  done              
-
-            # Step9: Get the report and save it in a known location for upload later 
-                alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
-                echo "$alerts" > /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
-                cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
-
-              if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
-                  echo "File zap_scan_results.json created successfully."
-                  pkill -f manage.py || true
-                  pkill -f zap-2.14.0.jar || true
-                  echo "Django server and ZAP processes terminated."
-
-              else
-                  echo "Failed to create zap_scan_results.json."
-                  exit 1
-              fi
-              exit
+            else
+                echo "Failed to create zap_scan_results.json."
+                exit 1
+            fi
+            exit
           EOF
 
       # Upload zap Scan spidering Results after exiting SSH session 
-      - name: Upload zap Scan spidering Results in the github artifact
-        run: |
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }}:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json
+      - name: Upload zap Scan spidering Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-results
+          path: /home/ec2-user/ZAP_2.14.0/zap_scan_results.json
 
       # Terminate EC2 Instance after uploading results 
       - name: Terminate EC2 Instance 
