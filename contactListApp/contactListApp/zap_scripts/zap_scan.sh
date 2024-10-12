@@ -76,42 +76,42 @@ while true; do
     fi 
 done              
 
-# Step5: Start Active Scan after Spidering completes 
-# active_scan_response=$(curl -s "http://127.0.0.1:8080/JSON/ascan/action/scan/?url=http://127.0.0.1:8000")
-# active_scan_id=$(echo $active_scan_response | jq -r '.scan')
+Step5: Start Active Scan after Spidering completes 
+active_scan_response=$(curl -s "http://127.0.0.1:8080/JSON/ascan/action/scan/?url=http://127.0.0.1:8000")
+active_scan_id=$(echo $active_scan_response | jq -r '.scan')
 
-# echo "Active Scan response: $active_scan_response"
+echo "Active Scan response: $active_scan_response"
 
-# if [[ "$active_scan_id" == "null" ]]; then
-#     echo "Failed to start active scanning, response: $active_scan_response"
-#     exit 1
-# fi
+if [[ "$active_scan_id" == "null" ]]; then
+    echo "Failed to start active scanning, response: $active_scan_response"
+    exit 1
+fi
 
-# echo "Started active scanning with scan ID: $active_scan_id"
+echo "Started active scanning with scan ID: $active_scan_id"
 
-# # Step6: Wait for the Active Scan to finish
-# while true; do
-#     active_status=$(curl -s "http://127.0.0.1:8080/JSON/ascan/view/status/?scanId=$active_scan_id" | jq -r '.status')
+# Step6: Wait for the Active Scan to finish
+while true; do
+    active_status=$(curl -s "http://127.0.0.1:8080/JSON/ascan/view/status/?scanId=$active_scan_id" | jq -r '.status')
     
-#     echo "Active Scan status: $active_status"  # Debugging output
+    echo "Active Scan status: $active_status"  # Debugging output
 
-#     if [[ "$active_status" == "100" ]]; then
-#         echo "Active scanning completed!"
-#         break
-#     fi
+    if [[ "$active_status" == "100" ]]; then
+        echo "Active scanning completed!"
+        break
+    fi
     
-#     sleep 5
+    sleep 5
     
-#     if [[ "$active_status" == "" ]]; then 
-#         echo "No status received, exiting."
-#         exit 1 
-#     fi 
+    if [[ "$active_status" == "" ]]; then 
+        echo "No status received, exiting."
+        exit 1 
+    fi 
 
-#     if [[ "$active_status" == "error" ]]; then 
-#         echo "Error during active scanning, exiting."
-#         exit 1 
-#     fi 
-# done              
+    if [[ "$active_status" == "error" ]]; then 
+        echo "Error during active scanning, exiting."
+        exit 1 
+    fi 
+done              
 
 # Step7: Generate and save the report of the scan
 alerts=$(curl -s "http://127.0.0.1:8080/JSON/core/view/alerts/?baseurl=http://127.0.0.1:8000")
