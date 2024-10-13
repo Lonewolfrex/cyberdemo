@@ -75,133 +75,147 @@ jobs:
           name: snyk-report
           path: snyk_report.json
 
-  aws-server-hosting:
+    aws-server-hosting:
     runs-on: ubuntu-latest
     needs: sca-scan
-    outputs:
-      instance_id: ${{ steps.launch_ec2.outputs.instance_id }}
-      ec2_ip: ${{ steps.get_ip.outputs.ec2_ip }}
     steps:
-      - name: Configure AWS Credentials
+        - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ap-south-1
     
-      - name: Set up AWS SSH
+        - name: Set up AWS SSH
         run: |
             mkdir -p ~/.ssh
             echo "${{ secrets.AWS_KEY_PAIR_MUMBAI }}" > ~/.ssh/MyKeyPair.pem
             chmod 600 ~/.ssh/MyKeyPair.pem
 
-      - name: Launch EC2 Instance
+        - name: Launch EC2 Instance
         id: launch_ec2
         run: |
-          INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
-          echo "Launched instance ID: $INSTANCE_ID"
-          echo "::set-output name=instance_id::$INSTANCE_ID"
+            INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
+            echo "Launched instance ID: $INSTANCE_ID"
+            echo "::set-output name=instance_id::$INSTANCE_ID"
 
-      - name: Wait for EC2 Instance to be Running
+        - name: Wait for EC2 Instance to be Running
         run: |
-          aws ec2 wait instance-running --instance-ids ${{ steps.launch_ec2.outputs.instance_id }}
-          sleep 10
+            aws ec2 wait instance-running --instance-ids ${{ steps.launch_ec2.outputs.instance_id }}
+            sleep 10
 
-      - name: Get EC2 Instance IP Address
+        - name: Get EC2 Instance IP Address
         id: get_ip
         run: |
-          EC2_IP=$(aws ec2 describe-instances --instance-ids ${{ steps.launch_ec2.outputs.instance_id }} --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-          echo "EC2 Public IP is $EC2_IP"
-          echo "::set-output name=ec2_ip::$EC2_IP"
+            EC2_IP=$(aws ec2 describe-instances --instance-ids ${{ steps.launch_ec2.outputs.instance_id }} --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+            echo "EC2 Public IP is $EC2_IP"
+            echo "::set-output name=ec2_ip::$EC2_IP"
 
-      - name: Install Dependencies and Run App on EC2 Instance
+        - name: Install Dependencies and Run App on EC2 Instance
         run: |
             EC2_IP=${{ steps.get_ip.outputs.ec2_ip }}
-            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
-              
-
-              # Step1: Update and install necessary packages
-              sudo yum update -y
-              sudo yum install python3 python3-pip git jq -y
-              
-              # Step2: Clone the Django app repository and install requirements 
-              cd /home/ec2-user/
-              git clone https://github.com/Lonewolfrex/cyberdemo.git
-              cd cyberdemo
-              pip3 install -r requirements.txt
-              cd contactListApp
-              
-              # Step3: Update settings for ALLOWED_HOSTS and collect static files 
-              sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
-              python3 manage.py collectstatic --noinput
-  
-              # Step4: Run migrations to set up the database 
-              python3 manage.py makemigrations
-              python3 manage.py migrate
+            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<'EOF'
                 
-            EOF
-
-  dast-scan:
-    runs-on: ubuntu-latest
-    needs: aws-server-hosting
-    steps:
-        - name: Host the Server
-          run: |
-            EC2_IP=${{ needs.aws-server-hosting.outputs.ec2_ip }}
-            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
-                        
-                cd /home/ec2-user/cyberdemo/contactListApp
+                # Step1: Update and install necessary packages
+                sudo yum update -y
+                sudo yum install python3 python3-pip git jq -y
+                
+                # Step2: Clone the Django app repository and install requirements 
+                cd /home/ec2-user/
+                git clone https://github.com/Lonewolfrex/cyberdemo.git
+                cd cyberdemo
+                pip3 install -r requirements.txt
+                cd contactListApp
+                
+                # Step3: Update settings for ALLOWED_HOSTS and collect static files 
+                sed -i "s/^ALLOWED_HOSTS = .*/ALLOWED_HOSTS = ['$EC2_IP', 'localhost', '127.0.0.1']/" contactListApp/settings.py
+                python3 manage.py collectstatic --noinput
+    
+                # Step4: Run migrations to set up the database 
+                python3 manage.py makemigrations
+                python3 manage.py migrate
+                
+                # Step5: Start the Django server
                 python3 manage.py runserver 0.0.0.0:8000 &
                 sleep 10
     
-                # Step6: (Optional) Verify that the server is running
+                # Step6: Verify that the server is running
                 if curl -s "http://127.0.0.1:8000" > /dev/null; then
                     echo "Django server is running successfully."
                 else
                     echo "Failed to start Django server."
                     exit 1
-
                 fi
-            EOF    
+            EOF
 
-        - name: Perform Zap scan
-          run: |  
-              EC2_IP=${{ needs.aws-server-hosting.outputs.ec2_ip }}
-              ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
-                    chmod 777 /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
-                    bash /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh                
-                    if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
-                            echo "File zap_scan_results.json created successfully."
-                            cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
-                            pkill -f manage.py || true
-                            pkill -f zap-2.14.0.jar || true
-                            echo "Django server and ZAP processes terminated."
-
+    dast-scan:
+        runs-on: ubuntu-latest
+        needs: aws-server-hosting
+        steps:
+            - name: Host the Server (already running check)
+              run: |
+                EC2_IP=${{ needs.aws-server-hosting.outputs.ec2_ip }}
+                ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<'EOF'
+                    # Step1: Check if the server is already running
+                    if pgrep -f manage.py > /dev/null; then
+                        echo "Django server is already running."
                     else
-                            echo "Failed to create zap_scan_results.json."
+                        echo "Django server is not running. Starting the server."
+                        cd /home/ec2-user/cyberdemo/contactListApp
+                        python3 manage.py runserver 0.0.0.0:8000 &
+                        sleep 10
+                        # Verify that the server started successfully
+                        if curl -s "http://127.0.0.1:8000" > /dev/null; then
+                            echo "Django server started successfully."
+                        else
+                            echo "Failed to start Django server."
                             exit 1
+                        fi
                     fi
-                EOF 
+                EOF
 
-        - name: Upload zap Scan Results
-          run: |
+            - name: Perform Zap scan
+              run: |  
+                EC2_IP=${{ needs.aws-server-hosting.outputs.ec2_ip }}
+                ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<'EOF'
+                    # Ensure ZAP script has correct permissions
+                    chmod +x /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+                    
+                    # Run the ZAP scan script
+                    bash /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+                    
+                    # Check if the ZAP scan results are generated
+                    if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
+                        echo "ZAP scan results created successfully."
+                        pkill -f manage.py || true  # Ensure Django server is stopped
+                        pkill -f zap-2.14.0.jar || true  # Ensure ZAP process is stopped
+                        echo "Terminated Django server and ZAP process."
+                    else
+                        echo "Failed to create ZAP scan results."
+                        exit 1
+                    fi
+                EOF
+
+            - name: Upload zap Scan Results
+              run: |
                 EC2_IP=${{ needs.aws-server-hosting.outputs.ec2_ip }}
                 scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json || { echo "SCP failed"; exit 1; }
-      
-        - name: Verify Uploaded File
-          run: |
+
+            - name: Verify Uploaded File
+              run: |
                 if [ -f ./zap_scan_results.json ]; then
-                    echo "Scan results uploaded successfully."
+                    echo "ZAP scan results uploaded successfully."
                 else
-                    echo "Failed to upload scan results."
+                    echo "Failed to upload ZAP scan results."
                     exit 1
                 fi
-      
-        - name: Upload zap Scan Results as Artifact
-          uses: actions/upload-artifact@v3
-          with:
-                  name: zap-scan-results
-                  path: ./zap_scan_results.json              
+
+            - name: Upload zap Scan Results as Artifact
+              uses: actions/upload-artifact@v3
+              with:
+                name: zap-scan-results
+                path: ./zap_scan_results.json
+                   
 
   terminate-server:
     runs-on: ubuntu-latest
