@@ -136,7 +136,7 @@ jobs:
                 python3 manage.py migrate
                 
                 # Step5: Start the Django server
-                python3 manage.py runserver 0.0.0.0:8000 &
+                nohup python3 manage.py runserver 0.0.0.0:8000 &
                 sleep 10
     
                 # Step6: Verify that the server is running

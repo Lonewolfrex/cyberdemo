@@ -12,7 +12,7 @@ cd ZAP_2.14.0/
 sudo yum install java-17 -y
 
 # Start ZAP in daemon mode
-java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
+nohup java -jar zap-2.14.0.jar -daemon -port 8080 -config api.disablekey=true &
 sleep 30  # Wait for ZAP to initialize
 
 # Function to check if ZAP is running
