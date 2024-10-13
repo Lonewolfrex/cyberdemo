@@ -60,6 +60,25 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
+      # Step to install Snyk
+      - name: Install Snyk CLI
+        run: |
+          npm install -g snyk
+
+      # Step to run Snyk test
+      - name: Run Snyk Test
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_API }}
+        run: |
+          snyk test --all-projects --json > snyk_report.json || true  # Capture output even if there are issues
+
+      # Step to upload Snyk report as an artifact
+      - name: Upload Snyk Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: snyk-report
+          path: snyk_report.json
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -141,7 +160,6 @@ jobs:
         run: |
           scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }}:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json || { echo "SCP failed"; exit 1; }
 
-      # Verify if the file was uploaded successfully
       - name: Verify Uploaded File
         run: |
           if [ -f ./zap_scan_results.json ]; then
@@ -157,7 +175,6 @@ jobs:
             name: zap-scan-results
             path: ./zap_scan_results.json
 
-      # Terminate EC2 Instance after uploading results 
       - name: Terminate EC2 Instance 
         if: always()
         run: |
