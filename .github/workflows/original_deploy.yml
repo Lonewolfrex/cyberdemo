@@ -134,40 +134,48 @@ jobs:
               # Step4: Run migrations to set up the database 
               python3 manage.py makemigrations
               python3 manage.py migrate
-              
-              # Step5: Start the Django development server 
-              python3 manage.py runserver 0.0.0.0:8000 &
-              sleep 10
-  
-              # Step6: (Optional) Verify that the server is running
-              if curl -s "http://127.0.0.1:8000" > /dev/null; then
-                echo "Django server is running successfully."
-              else
-                echo "Failed to start Django server."
-                exit 1
-              fi
-  
+                
             EOF
 
   dast-scan:
     runs-on: ubuntu-latest
     needs: aws-server-hosting
     steps:
-        - name: Perform Zap scan
+        - name: Host the Server
           run: |
-              chmod 777 /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
-              bash /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh                
-              if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
-                    echo "File zap_scan_results.json created successfully."
-                    cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
-                    pkill -f manage.py || true
-                    pkill -f zap-2.14.0.jar || true
-                    echo "Django server and ZAP processes terminated."
-
-              else
-                    echo "Failed to create zap_scan_results.json."
+            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
+                        
+                cd /home/ec2-user/cyberdemo/contactListApp
+                python3 manage.py runserver 0.0.0.0:8000 &
+                sleep 10
+    
+                # Step6: (Optional) Verify that the server is running
+                if curl -s "http://127.0.0.1:8000" > /dev/null; then
+                    echo "Django server is running successfully."
+                else
+                    echo "Failed to start Django server."
                     exit 1
-              fi
+                    
+                fi
+                            
+            EOF    
+        - name: Perform Zap scan
+          run: |       
+              ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<EOF
+                    chmod 777 /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+                    bash /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh                
+                    if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
+                            echo "File zap_scan_results.json created successfully."
+                            cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
+                            pkill -f manage.py || true
+                            pkill -f zap-2.14.0.jar || true
+                            echo "Django server and ZAP processes terminated."
+
+                    else
+                            echo "Failed to create zap_scan_results.json."
+                            exit 1
+                    fi
+                EOF 
 
         - name: Upload zap Scan Results
           run: |
