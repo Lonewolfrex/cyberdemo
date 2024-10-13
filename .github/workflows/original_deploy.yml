@@ -75,44 +75,44 @@ jobs:
           name: snyk-report
           path: snyk_report.json
 
-    aws-server-hosting:
+  aws-server-hosting:
     runs-on: ubuntu-latest
     needs: sca-scan
     steps:
         - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
+          uses: aws-actions/configure-aws-credentials@v1
+          with:
             aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
             aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
             aws-region: ap-south-1
     
         - name: Set up AWS SSH
-        run: |
+          run: |
             mkdir -p ~/.ssh
             echo "${{ secrets.AWS_KEY_PAIR_MUMBAI }}" > ~/.ssh/MyKeyPair.pem
             chmod 600 ~/.ssh/MyKeyPair.pem
 
         - name: Launch EC2 Instance
-        id: launch_ec2
-        run: |
+          id: launch_ec2
+          run: |
             INSTANCE_ID=$(aws ec2 run-instances --image-id ami-078264b8ba71bc45e --count 1 --instance-type t2.micro --key-name AWS_KEY_PAIR_MUMBAI --security-group-ids sg-07afad8b77062b7a3 --query 'Instances[0].InstanceId' --output text)
             echo "Launched instance ID: $INSTANCE_ID"
             echo "::set-output name=instance_id::$INSTANCE_ID"
 
         - name: Wait for EC2 Instance to be Running
-        run: |
+          run: |
             aws ec2 wait instance-running --instance-ids ${{ steps.launch_ec2.outputs.instance_id }}
             sleep 10
 
         - name: Get EC2 Instance IP Address
-        id: get_ip
-        run: |
+          id: get_ip
+          run: |
             EC2_IP=$(aws ec2 describe-instances --instance-ids ${{ steps.launch_ec2.outputs.instance_id }} --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
             echo "EC2 Public IP is $EC2_IP"
             echo "::set-output name=ec2_ip::$EC2_IP"
 
         - name: Install Dependencies and Run App on EC2 Instance
-        run: |
+          run: |
             EC2_IP=${{ steps.get_ip.outputs.ec2_ip }}
             ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -i ~/.ssh/MyKeyPair.pem ec2-user@$EC2_IP <<'EOF'
                 
@@ -148,7 +148,7 @@ jobs:
                 fi
             EOF
 
-    dast-scan:
+  dast-scan:
         runs-on: ubuntu-latest
         needs: aws-server-hosting
         steps:
@@ -216,7 +216,6 @@ jobs:
                 name: zap-scan-results
                 path: ./zap_scan_results.json
                    
-
   terminate-server:
     runs-on: ubuntu-latest
     needs: dast-scan 
