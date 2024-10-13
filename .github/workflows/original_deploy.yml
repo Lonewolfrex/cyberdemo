@@ -162,9 +162,8 @@ jobs:
                     exit 1
 
                 fi
-                            
-
             EOF    
+
         - name: Perform Zap scan
           run: |  
               EC2_IP=${{ needs.aws-server-hosting.outputs.ec2_ip }}
