@@ -59,3 +59,25 @@ jobs:
             -Dsonar.sources=. \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+  sca:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+
+        - name: Install Snyk CLI
+          run: |
+            npm install -g snyk
+
+        - name: Run Snyk Test
+          env:
+            SNYK_TOKEN: ${{ secrets.SNYK_API }}
+          run: |
+            snyk test --all-projects --json > snyk_report.json || true
+
+        - name: Upload Snyk Report
+          uses: actions/upload-artifact@v3
+          with:
+            name: snyk-report
+            path: snyk_report.json            
