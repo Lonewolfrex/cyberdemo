@@ -1,0 +1,16 @@
+name: Terminate Server
+
+on:
+  workflow_run:
+    workflows: ["DAST Scan on ZAP"]
+    types:
+      - completed
+
+jobs:
+  dast:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Terminate EC2 Instance 
+          if: always()
+          run: |
+            aws ec2 terminate-instances --instance-ids ${{ env.EC2_INSTANCE_ID }} 
