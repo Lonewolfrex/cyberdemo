@@ -175,7 +175,7 @@ jobs:
             name: zap-scan-results
             path: ./zap_scan_results.json
 
-      - name: Terminate EC2 Instance 
-        if: always()
-        run: |
-          aws ec2 terminate-instances --instance-ids ${{ steps.launch_ec2.outputs.instance_id }} 
+    #   - name: Terminate EC2 Instance 
+    #     if: always()
+    #     run: |
+    #       aws ec2 terminate-instances --instance-ids ${{ steps.launch_ec2.outputs.instance_id }} 
