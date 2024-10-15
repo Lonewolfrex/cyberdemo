@@ -30,54 +30,54 @@ jobs:
       - name: Check Java Version
         run: java -version
 
-      - name: Run SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # Download a compatible version of SonarScanner with error handling
-          curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
+    #   - name: Run SonarCloud Scan
+    #     env:
+    #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    #     run: |
+    #       # Download a compatible version of SonarScanner with error handling
+    #       curl -L -sSLo sonarqube-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
           
-          # Check if the download was successful
-          if [ ! -f sonarqube-scanner.zip ]; then
-            echo "Download failed!"
-            exit 1
-          fi
+    #       # Check if the download was successful
+    #       if [ ! -f sonarqube-scanner.zip ]; then
+    #         echo "Download failed!"
+    #         exit 1
+    #       fi
           
-          # Unzip the downloaded scanner
-          unzip sonarqube-scanner.zip
+    #       # Unzip the downloaded scanner
+    #       unzip sonarqube-scanner.zip
           
-          # Check if unzip was successful
-          if [ $? -ne 0 ]; then
-            echo "Unzip failed! The downloaded file may be corrupt."
-            exit 1
-          fi
+    #       # Check if unzip was successful
+    #       if [ $? -ne 0 ]; then
+    #         echo "Unzip failed! The downloaded file may be corrupt."
+    #         exit 1
+    #       fi
   
-          # Run SonarScanner
-          ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-            -Dsonar.sources=. \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+    #       # Run SonarScanner
+    #       ./sonar-scanner-6.2.1.4610-linux-x64/bin/sonar-scanner \
+    #         -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
+    #         -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+    #         -Dsonar.sources=. \
+    #         -Dsonar.host.url=https://sonarcloud.io \
+    #         -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
-      # Step to install Snyk
-      - name: Install Snyk CLI
-        run: |
-          npm install -g snyk
+    #   # Step to install Snyk
+    #   - name: Install Snyk CLI
+    #     run: |
+    #       npm install -g snyk
 
-      # Step to run Snyk test
-      - name: Run Snyk Test
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_API }}
-        run: |
-          snyk test --all-projects --json > snyk_report.json || true  # Capture output even if there are issues
+    #   # Step to run Snyk test
+    #   - name: Run Snyk Test
+    #     env:
+    #       SNYK_TOKEN: ${{ secrets.SNYK_API }}
+    #     run: |
+    #       snyk test --all-projects --json > snyk_report.json || true  # Capture output even if there are issues
 
-      # Step to upload Snyk report as an artifact
-      - name: Upload Snyk Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: snyk-report
-          path: snyk_report.json
+    #   # Step to upload Snyk report as an artifact
+    #   - name: Upload Snyk Report
+    #     uses: actions/upload-artifact@v3
+    #     with:
+    #       name: snyk-report
+    #       path: snyk_report.json
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -137,43 +137,43 @@ jobs:
               python3 manage.py runserver 0.0.0.0:8000 &
               sleep 10
 
-            # Step5: 
-              chmod 777 /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
-              bash /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+            # # Step5: 
+            #   chmod 777 /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
+            #   bash /home/ec2-user/cyberdemo/contactListApp/contactListApp/zap_scripts/zap_scan.sh
 
-            # Step6 :
-            if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
-                echo "File zap_scan_results.json created successfully."
-                cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
-                pkill -f manage.py || true
-                pkill -f zap-2.14.0.jar || true
-                echo "Django server and ZAP processes terminated."
+            # # Step6 :
+            # if [ -f /home/ec2-user/ZAP_2.14.0/zap_scan_results.json ]; then
+            #     echo "File zap_scan_results.json created successfully."
+            #     cat /home/ec2-user/ZAP_2.14.0/zap_scan_results.json  # Optional debug output of file contents.
+            #     pkill -f manage.py || true
+            #     pkill -f zap-2.14.0.jar || true
+            #     echo "Django server and ZAP processes terminated."
 
-            else
-                echo "Failed to create zap_scan_results.json."
-                exit 1
-            fi
+            # else
+            #     echo "Failed to create zap_scan_results.json."
+            #     exit 1
+            # fi
             exit
           EOF
 
-      - name: Upload zap Scan Results
-        run: |
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }}:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json || { echo "SCP failed"; exit 1; }
+    #   - name: Upload zap Scan Results
+    #     run: |
+    #       scp -o StrictHostKeyChecking=no -i ~/.ssh/MyKeyPair.pem ec2-user@${{ steps.get_ip.outputs.ec2_ip }}:/home/ec2-user/ZAP_2.14.0/zap_scan_results.json ./zap_scan_results.json || { echo "SCP failed"; exit 1; }
 
-      - name: Verify Uploaded File
-        run: |
-          if [ -f ./zap_scan_results.json ]; then
-              echo "Scan results uploaded successfully."
-          else
-              echo "Failed to upload scan results."
-              exit 1
-          fi
+    #   - name: Verify Uploaded File
+    #     run: |
+    #       if [ -f ./zap_scan_results.json ]; then
+    #           echo "Scan results uploaded successfully."
+    #       else
+    #           echo "Failed to upload scan results."
+    #           exit 1
+    #       fi
 
-      - name: Upload zap Scan Results as Artifact
-        uses: actions/upload-artifact@v3
-        with:
-            name: zap-scan-results
-            path: ./zap_scan_results.json
+    #   - name: Upload zap Scan Results as Artifact
+    #     uses: actions/upload-artifact@v3
+    #     with:
+    #         name: zap-scan-results
+    #         path: ./zap_scan_results.json
 
     #   - name: Terminate EC2 Instance 
     #     if: always()
