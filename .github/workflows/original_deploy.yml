@@ -60,7 +60,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
-      # Step to install Snyk
+      # Step to install Snyk yet to configure
       - name: Install Snyk CLI
         run: |
           npm install -g snyk
