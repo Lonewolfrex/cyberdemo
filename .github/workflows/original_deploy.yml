@@ -3,10 +3,10 @@ name: Deploy Django App
 on:
   push:
     branches:
-      - main  # Change to your main branch
+      - master  # Change to your main branch
   pull_request:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
